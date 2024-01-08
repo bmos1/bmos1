@@ -51,12 +51,20 @@ Search environment variable starting with the letter k.
 echo %USERNAME%
 set Username
 powershell Get-ChildItem env:
-set temp="dummy"
+set temp=dummy
 setx permant "dummy"
 setx /s remote /u user\domain /p password permant "dummy"
 setx /s remote /u user\domain /p password permant "dummy" /m
 setx TZONE /k HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\TimeZoneInformation\StandardName
 ```
+
+https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/setx
+
+* /s remote server
+* /u user
+* /p password
+* /k specifies a registry key
+* /m set system variable
 
 Query or renew IP and display or flush DNS
 
@@ -116,6 +124,26 @@ arp /a 10.0.0.80
 arp /s 10.0.0.80 00-AA-00-4F-2A-9C
 arp /d 10.0.0.80
 ```
+
+Using route, ping, tracert, pathping
+
+*Pathping* works in a very similar fashion, but once it confirms a hop, it will send multiple messages and provide the statistics. Because of that, pathping can be a little more reliable when compared to tracert to provide latency information.
+
+```
+route print
+route add 1.1.1.1/32
+route -p add 1.1.1.2/32 192.168.207.254
+ping -a 10.10.10.1 ... resolve hostname by IP
+tracert www.offsec.com
+pathping www.offsec.com
+```
+
+https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/pathping
+https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/tracert
+
+* tracert /d  ... do NOT resolve IP addresses
+* pathping /n ... do NOT resolve IP addresses
+* pathping /q ... number of echo
 
 ## Common network clients
 
