@@ -1,5 +1,6 @@
 # Network Scripting
 
+* Start a simple pyhton webserver
 * Write a client program with Python
 * Write a server program with Python
 * Write a port scanner with Python
@@ -8,6 +9,13 @@
 * Capture and send packets with Scapy
 
 https://www.kali.org/docs/introduction/default-credentials/
+
+
+# Start a simple Pyhton HTTP server 
+
+```bash
+sudo python -m http.server 80
+```
 
 # Write a ping
 
