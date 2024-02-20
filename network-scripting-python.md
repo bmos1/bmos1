@@ -10,8 +10,14 @@
 
 https://www.kali.org/docs/introduction/default-credentials/
 
+# URL safe encoding
 
-# Start a simple Pyhton HTTP server 
+```python
+import urllib.parse
+urllib.parse.quote('/La Niña/', safe='')
+```
+
+# Start a simple Python HTTP server 
 
 ```bash
 sudo python -m http.server 80
