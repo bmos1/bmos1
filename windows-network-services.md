@@ -337,6 +337,9 @@ Allow remote desktop connection from windows and linux.
 https://en.wikipedia.org/wiki/Remote_Desktop_Protocol
 
 * RDP uses TCP port 3389
+* -u user
+* -p password
+* -d user domain 
 
 ```
 rdesktop -u offensive -p security 192.168.192.64

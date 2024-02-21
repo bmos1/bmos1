@@ -30,6 +30,11 @@
   * Getting started 
   * https://learn.microsoft.com/en-us/windows-server/identity/ad-fs/ad-fs-overview
 
+## Remote Desktop
+```bash
+rdesktop -u [user] -p [password] -d [domainName] [ip:port]
+```
+
 ## Use NTLM pass-the-hash to create Kerberos TGTs 
 * insert stolen NTLM hash into memory
 * wipeout other NTLM hashes
@@ -77,4 +82,105 @@ c <- s: Service Authentication
 * LDAPv3 Protocol https://ldap.com/ldapv3-wire-protocol-reference/
 
 # Active Directory Elements
+* AD Security Identfier (SID) 
+* S-1-5-domainID-resourceID
+* e.g. S-1-5-21-2536614405-3629634762-1218571035-1116
+* Windows Server Manager -> Tools -> Active Directory Users and Computers
+
+All data is stored either directly at the Forest level or inside an Organizational Unit (OU). The structure of objects and OUs in Active Directory can be compared to files and folders on a file system.
+
+Note Active Directory cmdlets are only installed by default on Domain Controllers.
+
+* https://learn.microsoft.com/en-us/troubleshoot/windows-server/system-management-components/remote-server-administration-tools
+* https://learn.microsoft.com/en-us/troubleshoot/windows-server/system-management-components/remote-server-administration-tools#rsat-for-windows-10-version-1809-or-later-versions
+
+```powershell
+Get-ADUser username
+Get-ADComputer computername
+Get-ADGroup group
+Get-ADGroupMember group -recursive
+```
+
+## AD Users
+* Domain account
+* User Principal Name (UPN): e.g.  user@DOMAIN.COM
+* Applications that use domain resources use domain account (Kerberos: service account)
+
+Search and filter for Users
+
+* -Server 
+* -Identity 
+  * A distinguished name
+  * A GUID (objectGUID)
+  * A security identifier (objectSid)
+  * A SAM account name (sAMAccountName)
+* -Properties specifiy what to receive from output object 
+* -Filter search for and retrieve more than one user, use the Filter
+* -LDAPFilter specifies an LDAP query string that is used to filter Active Directory objects
+* -SearchBase specifies an Active Directory path to search under.
+
+
+```powershell
+Get-ADUser -Filter * -SearchBase "OU=Finance,OU=UserAccounts,DC=FABRIKAM,DC=COM"
+Get-ADUser -Filter 'Name -like "*SvcAccount"' | Format-Table Name, SamAccountName -A
+Get-ADUser -Identity 'ChewDavid' -Properties *
+Get-ADUser -Identity 'ChewDavid' -Properties "Title"
+Get-ADUser -Filter "Name -eq 'ChewDavid'" -SearchBase "DC=AppNC" -Properties "mail" -Server lds.Fabrikam.com:50000
+```
+
+Get all enable/active users accounts
+
+```powershell
+Get-ADUser -LDAPFilter '(!userAccountControl:1.2.840.113556.1.4.803:=2)'
+```
+
+Managed Service Account (sMSA) is a managed domain account that provides **automatic password management**, simplified service principal name (SPN) management and the ability to delegate the management to other administrators.
+The group Managed Service Account (gMSA) provides the same functionality within the domain and also extends that functionality over multiple servers.
+The Microsoft Key Distribution Service (kdssvc.dll) lets you securely obtain the key with a key identifier for an Active Directory account. The **Key Distribution Service shares a secret** that's used to create keys for the account. 
+For a gMSA, the domain controller computes the password on the key that the Key Distribution Services provides, along with other attributes of the gMSA. Member hosts can obtain the current and preceding password values by contacting a domain controller.
+
+Benefits of group Managed Service Account (gMSA):
+* password must be 120 characters
+* password must be changed every 30 days
+
+## AD Groups
+* Domain Admins are domain administrators, which means they **have unrestricted access** to the entire domain. 
+* Enterprise Admins group is also a **domain administrator of any other domain** in the Forest. 
+
+```powershell
+Get-ADGroup "Remote Desktop Users" -Properties "Description"
+Get-ADGroupMember "Remote Desktop Users" -recursive
+```
+
+Two main groups exist: Security groups and Distribution groups. 
+* Security groups on the other hand are used for **security permissions**.
+* Distribution groups are only used to define **email lists** and do not have any access rights or permission abilities. 
+
+
+
+
 # Administering Active Directory
+
+## Group Policicies
+* AD GPOs are XML configuration files
+* AD GPOs are hosted on `\\<domain controller host name>\sysvol` 
+* AD members and computers have READ permissions
+* Windows Server Manager -> Tools -> Group Policy Management
+* GPO Editor has two main categories for users and computers
+* Computer related settings **override user setttings**
+
+Generate the final policy result for an computer
+
+```powershell
+gpupdate /force
+gpresult /H result-policy.html
+```
+
+GPOs have built-in Conflict Management, the last will be the effective one.
+* Local
+* Domain
+* OU (parent, then child)
+
+AD-related  MMC will allow you to browse the AD for the correct Active Directory container and define Group Policy based on the selected scope of management (SOM). Examples of Active Directory-related snap-ins include the *Active Directory Users and Computers snap-in* and the *Active Directory Sites and Services snap-in*.
+
+
