@@ -156,12 +156,7 @@ Two main groups exist: Security groups and Distribution groups.
 * Security groups on the other hand are used for **security permissions**.
 * Distribution groups are only used to define **email lists** and do not have any access rights or permission abilities. 
 
-
-
-
-# Administering Active Directory
-
-## Group Policicies
+## AD Group Policies
 * AD GPOs are XML configuration files
 * AD GPOs are hosted on `\\<domain controller host name>\sysvol` 
 * AD members and computers have READ permissions
