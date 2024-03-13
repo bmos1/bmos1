@@ -154,3 +154,46 @@ sudo chown nobody: /tftp
 sudo atftpd --daemon --port 69 /tftp
 EOF
 ```
+
+## Connect FTP
+
+Anoymous connect
+
+```bash
+ftp host-IP
+Name: anonymous
+<Enter>
+
+ftp> ls
+ftp> get somefile.txt
+ftp> put somefile.bin
+ftp> quit
+
+# binary file transfer
+ftp> binary
+# text file only transfer (use with caution)
+ftp> ascii
+```
+
+## Connect to TFTP
+
+```bash
+tftp host-IP
+# ls option is by default deactivated
+tftp> get somefile.txt
+tftp> put somefile.txt
+```
+
+
+## Netcat
+
+```bash
+nc -lvnp 1234 > receive.txt
+nc -vn host-IP 1234 < send.txt
+```
+
+## SCP
+
+```bash
+scp user@IP:/home/user/.bash_history history.txt
+```
