@@ -33,12 +33,13 @@ cp file /var/www/html/
 ls -al /var/www/html/
 ```
 
-Prepare HTML file upload form using PHP
+### Prepare HTML file upload form using PHP
 
 * cp html and php file /var/www/html/
 * make upload directory /var/www/html/upload/
 * finally restart the apache2 web server to serve the upload
-* increase the file upload size /etc/php/<version>/apache2/php.ini 
+* increase the file upload size sudo vi /etc/php/<version>/apache2/php.ini 
+* e.g. **upload_max_filesize = 512M**
 
 ```bash
 cat <<EOF > /var/www/html/upload.html
@@ -57,6 +58,17 @@ Select File:
 </html>
 EOF
 ```
+
+```bash
+cat psupload.php
+<?php 
+$uploaddir = "/var/www/html/uploads/";
+$uploadfile = $uploaddir . $_FILES['file']['name'];
+move_uploaded_file($_FILES['file']['tmp_name'], $uploadfile);
+?>
+EOF
+
+### Upload PHP with Error handling
 
 ```bash
 cat <<EOF >/var/www/html/upload.php
@@ -79,7 +91,7 @@ EOF
 
 ```bash
 mkdir /var/www/html/uploads/
-chmod 777 
+chmod 777 .
 ```
 
 Execute HTML file upload using curl or wget
