@@ -21,3 +21,5 @@ sudo apt install foremost
 sudo foremost -v -t png -i /dev/sda1 -o ~/test
 sudo foremost -v -t jpg -i /dev/sda3 -o ~/test
 ```
+
+
