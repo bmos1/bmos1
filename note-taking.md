@@ -22,5 +22,6 @@ Use markdown and VS Code with Extension ```markdownlint``` , because
 * () rel. path
 * ** caption or title
 
-![First Markdown Image](/img/md-inline-screenshot.png)
-**This is the title**
+| ![empty](/img/md-inline-screenshot.png) |
+| :---: |
+| *This is the title* |

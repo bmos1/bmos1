@@ -7,7 +7,13 @@
 * Download a file with PowerShell
 * Upload a file with PowerShell
 
-## Use kali linux NC windows binary
+## Use Kali Linux NC windows-binary
+
+```bash
+sudo apt install windows-binaries
+ll /usr/share/windows-binaries/
+windows-binaries -h
+```
 
 ```bash
 sudo cp /usr/share/windows-binaries/nc.exe /var/www/html/
