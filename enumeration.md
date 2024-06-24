@@ -207,6 +207,9 @@ Remember: UDP scans are usefull, but sometimes unreliable. The reason is that Fi
 * -sS TCP SynScan - no handshake (sudo)
 * -sU UDP RawScan - raw socket (sudo)
 * -sV ServiceScan
+* -A OS Fingerprinting, script scan and tracerout (all)
+* -O OS Fingerprinting only
+* --osscan-guessing forces nmap to print all os guessing results (no accurate)
 
 ```bash
 #TCP Connect
@@ -215,6 +218,10 @@ nmap -sT 192.168.1.2
 sudo nmap -sS 192.168.1.2
 #UDP RawScan 
 sudo nmap -sU 192.168.1.2
+#OSS guessing
+nmap -O 192.168.1.2 --osscan-guessing
+#Service scanning
+nmap -sV -sT -A 192.168.1.2
 ```
 
 Network ping sweeping
@@ -222,10 +229,7 @@ Network ping sweeping
 * -sn Ping Sweeping on multiple hosts
 * -oG Grepable output
 * -p Scan specific ports
-* -O OS Fingerprinting only
-* -A OS Fingerprinting, script scan and tracerout (all)
 * --top-ports= Most use ports scan `cat /usr/share/nmap/nmap-services`
-* --osscan-guessing forces nmap to print all os guessing results (no accurate)
 
 ```bash
 #Ping sweeping 
@@ -275,7 +279,148 @@ nmap --script-help http-headers
 
 ```powershell
 #TCP Scan 
-Test-NetConnection -Port 80 192.168.1.2
+Test-NetConnection 192.168.1.2 -Port 80
+#TCP Scan using ForEach loop
+foreach($port in 1..2024) { If (($a=Test-NetConnection 192.168.1.2 -Port $port -WarningAction SilentlyContinue).tcpTestSucceeded -eq $true){ "TCP port $port is open"}} 
 #TCP Scan using ForEach-Object loop
 1..1024 | % { echo ((New-Object Net.Sockets.TcpClient).Connect("192.168.1.2", $_)) "TCP port $_ is open" } 2> $null
 ```
+
+### SMB Enum
+
+* UDP 137 NetBios (-r option)
+* TCP 139 Netbios
+* TCP 445 SMB
+
+```bash
+#NBT SMB enumeration using UDP 137
+sudo nbtscan -r 192.168.50.0/24
+#NMAP SMB enumeration
+nmap -v -p 139,445 -oG smb.txt 192.168.1.2-254
+grep "open" smb.txt | cut -d" " -f2 > hosts.txt
+```
+
+Enum 4 Linux
+
+```bash
+#ENUM SMB local users
+for ip in $(cat hosts.txt); do enum4linux -r $ip; done
+#ENUM SMV all
+enum4linux -a 192.168.1.2
+```
+
+SMB 1.0 (legacy)
+
+Use nmap script `smb-os-discovery` to list domain, forest, computers and NetBIOS name.
+
+```bash
+SMB 1.0 (legacy)
+nmap -v -p 139,445 --script smb-os-discovery 192.168.1.2
+```
+
+### SMB Scan (Windows)
+
+Use `net view` to list resources, computers and domains.
+
+```powershell
+# \\dc domain controller
+# /all lists administrative share ($)
+net view \\dc /all
+```
+
+### SMTP Scan
+
+* VRFY check if email address exists
+* EXPN list mailbox users
+* 2XX OK
+* 5XX Error
+
+```bash
+nc -nv 192.168.1.2 25
+VRFY Smith
+250 Fred Smith <Smith@USC-ISIF.ARPA>
+EXPN maillinglist
+250 Fred Smith <Smith@USC-ISIF.ARPA>
+^C
+```
+
+Non-interactive Probing for Users
+
+```bash
+echo "VRFY root \r\n QUIT"  | nc 192.168.192.8 25
+220 mail ESMTP Postfix (Ubuntu)
+252 2.0.0 root
+221 2.0.0 Bye
+
+echo "VRFY invaliduser \r\n QUIT"  | nc 192.168.1.2 25
+220 mail ESMTP Postfix (Ubuntu)
+550 5.1.1 <invaliduser>: Recipient address rejected: User unknown in local recipient table
+221 2.0.0 Bye
+echo "VRFY notexists \r\n QUIT"  | nc 192.168.1.2 25
+
+```
+
+### SMTP Scan (Windows)
+
+Use `telnet` to interact with SMPT on Port 25.
+
+* Install `dism /online /Enable-Feature /FeatureName:TelnetClient`
+* Location `c:\windows\system32\telnet.exe`
+
+```powershell
+Test-NetConnection 192.168.1.2 -Port 25
+telnet 192.168.1.2 25
+VRFY username 
+EXPN maillinglist 
+^C
+```
+
+### SNMP Scan
+
+* Use `nmap` to filter for open SNMP ports only
+
+```bash
+sudo nmap -sU -p 161 192.168.50.1-254 -oG snmp.txt
+grep "open" snmp.txt | cut -d" " -f2 > hosts.txt
+for ip in $(seq 1 254); do echo 192.168.1.$ip; done > hosts.txt
+```
+
+* Use `onesixtyone` for brute-force community strings
+* -c list of community string (e.g. public, private, managed)
+* -i list of IPs
+
+```bash
+echo "public" > community.txt
+echo "private" >> community.txt
+onesixtyone -c community.txt -i hosts.txt
+```
+
+* Use `snmpwalk` to query information
+* -c community string (e.g. public, private, managed)
+* -t 10 seconds timeout
+* -Oa Output Ascii
+* -v1 Version
+
+```bash
+snmpwalk -c public -v1 -Oa -t 10 192.168.1.2
+# Enum user account
+snmpwalk -c public -v2c 192.168.1.2 1.3.6.1.4.1.77.1.2.25
+# Enum installed software 
+snmpwalk -c public -v2c 192.168.1.2 1.3.6.1.2.1.25.6.3.1.2
+# Enum running processes
+snmpwalk -c public -v2c 192.168.1.2 1.3.6.1.2.1.25.4.2.1.2
+# Enum listening TCP ports
+snmpwalk -c public -v2c 192.168.1.2 1.3.6.1.2.1.6.13.1.3
+```
+
+ Management Information Base(MIB) Tables
+
+| Action | Result |
+| :---: | :-------: |
+| 1.3.6.1.4.1.77.1.2.25  | User Accounts      |
+| 1.3.6.1.2.1.25.6.3.1.2 | Installed Software |
+| 1.3.6.1.2.1.25.4.2.1.2 | Running Programs   |
+| 1.3.6.1.2.1.25.1.6.0   | System Processes   |
+| 1.3.6.1.2.1.25.4.2.1.4 | Processes Path     |
+| 1.3.6.1.2.1.25.2.3.1.4 | Storage Units      |
+| 1.3.6.1.2.1.6.13.1.3   | TCP Local Ports    |
