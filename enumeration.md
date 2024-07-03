@@ -415,7 +415,7 @@ snmpwalk -c public -v2c 192.168.1.2 1.3.6.1.2.1.6.13.1.3
 
  Management Information Base(MIB) Tables
 
-| Action | Result |
+| OID Values | Windows System Information |
 | :---: | :-------: |
 | 1.3.6.1.4.1.77.1.2.25  | User Accounts      |
 | 1.3.6.1.2.1.25.6.3.1.2 | Installed Software |
