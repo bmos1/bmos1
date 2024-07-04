@@ -63,7 +63,7 @@ Scan Web Applications (Sitemap):
 
 * Enter Name
 * Enter Targets
-* Click Credential
+* Click Credentials
 * Select `SSH`
 * Enter user credentials
 * Select `sudo` for privilege elevation
@@ -85,3 +85,52 @@ Host Configurations
 
 * SSH 22 -> OS Identification and Installed Software Enumeration over SSH
 * Patch Report finding lists missing security patches
+
+### Working with Plugins in Nessus
+
+* Use `Advanced Dynamic Scan`
+* Click to `Dynamic Plugins`
+* Search for specific plugin by CVE number etc.  
+
+## Vuln Scan with NMAP scripts
+
+* Performs a lightweight vuln scan if Nessus make too much noise
+* Requires scripts to be effective
+* NSE script are categorized in vuln, exploit, brute forcing, and network discovery, ...
+* Use **safe** scripts and avoid **intrusive** because it might crash a target service or system
+
+```bash
+cat /usr/share/nmap/scripts/script.db  | grep "\"vuln\""
+Entry { filename = "afp-path-vuln.nse", categories = { "exploit", "intrusive", "vuln", } }
+Entry { filename = "broadcast-avahi-dos.nse", categories = { "broadcast", "dos", "intrusive", "vuln", } }
+...
+```
+
+Lookup CVEs using **Vulner** `https://nmap.org/nsedoc/scripts/vulners.html`
+
+* -sV Service detection is required to show PoCs or Exploits
+* shows CVEs and more
+
+```bash
+# User vulner to lookup newer CVEs
+nmap -sV --script vulners [--script-args mincvss=<arg_val>] <target>
+# Category vuln = vulnerabilities
+sudo nmap -sV -p <ports> --script "vuln" <targets>
+# Output example 
+CVE-2021-41773  7.5     https://vulners.com/cve/CVE-2021-41773
+```
+
+Search for specific CVEs using NSE
+
+* Use google to find NSE scripts
+* Search for `cve-2021-41773.nse`
+* Download NSE to `/usr/share/nmap/scripts/`
+* --script-updatedb required
+
+```bash
+# Install script CVE-2021-41773 and update DB
+sudo cp ~/Downloads/http-vuln-cve-2021-41773.nse /usr/share/nmap/scripts/http-vuln-cve2021-41773.nse
+sudo nmap --script-updatedb
+# Run Script
+sudo nmap -sV -p <ports> --script "http-vuln-cve2021-41773" <targets>
+```
