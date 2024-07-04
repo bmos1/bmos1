@@ -96,6 +96,7 @@ Host Configurations
 
 * Performs a lightweight vuln scan if Nessus make too much noise
 * Requires scripts to be effective
+* Manual `https://nmap.org/book/man-nse.html`
 * NSE script are categorized in vuln, exploit, brute forcing, and network discovery, ...
 * Use **safe** scripts and avoid **intrusive** because it might crash a target service or system
 
@@ -115,7 +116,7 @@ Lookup CVEs using **Vulner** `https://nmap.org/nsedoc/scripts/vulners.html`
 # User vulner to lookup newer CVEs
 nmap -sV --script vulners [--script-args mincvss=<arg_val>] <target>
 # Category vuln = vulnerabilities
-sudo nmap -sV -p <ports> --script "vuln" <targets>
+sudo nmap -sV -p <ports> --script "safe and vuln" <targets>
 # Output example 
 CVE-2021-41773  7.5     https://vulners.com/cve/CVE-2021-41773
 ```
