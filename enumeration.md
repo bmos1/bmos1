@@ -31,7 +31,7 @@ CIDR:           38.0.0.0/8
 
 ```
 
-### Google Hacking
+### Google Dorks Hacking
 
 * search for TXT find robots.txt(crawler exclusion)
 * search for XML extension to find XML pages

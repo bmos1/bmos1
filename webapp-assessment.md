@@ -45,6 +45,12 @@ gobuster dir -v -b 301 -u <target> -w /usr/share/wordlists/dirb/common.txt -t 4
 /uploads              (Status: 301) [Size: 316] [--> http://192.168.50.20/uploads/
 ```
 
+## Brute-Force web login passwords with Hydra
+
+```bash
+hydra -f -vV -l admin -P passwords.lst <target> http-post-form '/login.php:username=^USER^&password=^PASS^&debug=0:Login Failed!'
+```
+
 ## Web application assesment with Burp Suite
 
 * Default proxy `https://127.0.0.1:8080`
@@ -64,7 +70,8 @@ Using Burp Intruder
 * Click `Payloads`
 * Select `Simple List`
 * Paste the plain text list the payload
-* Enter 
+* Click `Settings`
+* Enter Login failed indicator
 
 ```bash
 # copy to clipboard
@@ -89,11 +96,17 @@ cat <(xclip -sel clip -o)
 | :---: |
 | *Result indicate a valid login* |
 
+## Web Enumeration with Burp
 
-Use Hydra as CLI alternative
+Technology stacks always consists of `OS, web server, database, backend/frontend programming language`. 
 
-```bash
-hydra -f -vV -l admin -P passwords.lst <target> http-post-form '/login.php:username=^USER^&password=^PASS^&debug=0:Login Failed!'
-```
+HTTP Response Headers `Server:`, `X-Powered-By:` or `X-Forwarded-For` will often reveal the web server software and version.
 
-## Web Enumeration
+E.g.
+* "X-Powered-By": Nginx
+* "x-amz-cf-id" Amazon CloudFront
+* "X-Aspnet-Version" ASP .NET
+
+
+
+
