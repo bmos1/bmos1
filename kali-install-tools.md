@@ -23,3 +23,9 @@ Install script `https://learn.microsoft.com/en-us/powershell/scripting/install/i
 ```bash
 dotnet tool install --global PowerShell
 ```
+
+## Install ExploitDB and SearchSploit
+
+```bash
+sudo apt -y install exploitdb
+```
