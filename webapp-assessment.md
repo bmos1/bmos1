@@ -40,7 +40,8 @@ Gobuster is a tool used to brute-force: URIs (directories and files) in web site
 
 ```bash
 sudo apt install gobuster
-gobuster dir -u <target> -w /usr/share/wordlists/dirb/common.txt -t 4
+gobuster dir -u <target> -w /usr/share/wordlists/dirb/small.txt -t 4
+gobuster dir -u http://target.com/ -w /usr/share/wordlists/dirb/big.txt -t 4 -x html,htm
 gobuster dir -v -b 301 -u <target> -w /usr/share/wordlists/dirb/common.txt -t 4
 # Output example
 /uploads              (Status: 301) [Size: 316] [--> http://192.168.50.20/uploads/
