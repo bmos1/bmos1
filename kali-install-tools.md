@@ -30,6 +30,16 @@ dotnet tool install --global PowerShell
 sudo apt -y install exploitdb
 ```
 
+## Install VS Code
+
+* Navigate to `https://code.visualstudio.com/download`
+* Click ARM64 to download ... arm64.deb
+* Install with apt
+
+```bash
+sudo apt install code...arm64.deb
+```
+
 ## Install WebDAV
 
 ```bash
@@ -39,7 +49,7 @@ echo "WebDAV test" > /home/kali/webdav/test.txt
 /home/kali/.local/bin/wsgidav --host=0.0.0.0 --port=80 --auth=anonymous --root /home/kali/webdav/
 ```
 
-## Install Upload server
+## Install HTTP Upload Server
 
 ```bash
 pip install uploadserver
@@ -60,4 +70,13 @@ elif 'files' in form:
     fields = form['files']
 else:
     return (http.HTTPStatus.BAD_REQUEST, 'Field "file" or "files" not found')
+```
+
+## TLDR
+
+TL;DR: Tell us how touse the tools efficiently
+
+```bash
+sudo apt update && sudo apt install tldr
+tldr --update
 ```

@@ -330,6 +330,10 @@ net view \\dc /all
 
 ### SMTP Scan
 
+* Command Reference `https://www.samlogic.net/articles/smtp-commands-reference.htm`
+* Auth Mechanism `https://www.samlogic.net/articles/smtp-commands-reference-auth.htm`
+* EHLO or HELO
+* AUTH LOGIN
 * VRFY check if email address exists
 * EXPN list mailbox users
 * 2XX OK

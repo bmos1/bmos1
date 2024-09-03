@@ -58,7 +58,7 @@ dirb http://target.com:80 /usr/share/wordlists/dirb/common.txt
 ## Brute-Force web login passwords with Hydra
 
 ```bash
-hydra -f -vV -l admin -P passwords.lst <target> http-post-form '/login.php:username=^USER^&password=^PASS^&debug=0:Login Failed!'
+hydra -f -vV -l admin -P passwords.lst <target> http-post-form '/login.php:username=^USER^&password=^PASS^&debug=0:F=Login Failed!'
 ```
 
 ## Web application assesment with Burp Suite
@@ -117,6 +117,16 @@ E.g.
 * "x-amz-cf-id" Amazon CloudFront
 * "X-Aspnet-Version" ASP .NET
 
+## CSRF and Cookie
 
+* -c write cookie
+* -b use/read cookie
+* Use awk to extract csrf token
+  * -F field seperator
+  * /search/ operator
 
-
+```bash
+CSRF=$(curl -s -c cookie "https://TARGET.com/login.php" | awk -F 'value=' '/csrf_token/ {print $2}' | cut -d\" -f2)
+DATA="username=USER&password=PASS&csrf_token=$CSRF"
+curl -s -b cookie -d "$DATA" "https://TARGET.com/login.php"
+```
