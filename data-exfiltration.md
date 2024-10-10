@@ -181,10 +181,13 @@ ftp> get somefile.txt
 ftp> put somefile.bin
 ftp> quit
 
+# disable passive mode
+ftp> passive
 # binary file transfer
 ftp> binary
 # text file only transfer (use with caution)
 ftp> ascii
+
 ```
 
 ## Connect to TFTP

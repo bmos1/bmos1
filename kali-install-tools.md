@@ -1,5 +1,73 @@
 # Install tools on Kali (Arm64 M1)
 
+## Install UTM Shared Folder
+
+Install Spice Guest Tools `https://gist.github.com/lokka30/e2f04045c3b982690279d5ca8da3acb9#file-spice-guest-tools-debian-utm-md`
+
+```bash
+sudo apt install spice-vdagent spice-webdavd
+# Run spice-vdagent
+echo "# Install Spice Guest Tools"  >> .zshrc
+echo "spice-vdagent" >> .zshrc
+```
+
+## Install Run x86 apps on Arm64
+
+```bash
+sudo apt update
+sudo apt install -y qemu-user-static binfmt-support
+sudo dpkg --add-architecture amd64
+sudo apt update
+sudo apt install libc6:amd64
+```
+
+## Install Docker 
+
+```bash
+kali@kali:~$ sudo apt update
+kali@kali:~$ sudo apt install -y docker.io
+kali@kali:~$ sudo systemctl enable docker --now
+```
+
+## Install Shellter x86 only
+
+* **Limitation**: Require x86, 32bit windows only
+* Install Shellter for AV Evasion `https://github.com/dekadentno/bootleg-shellter-docker`
+
+```docker
+# Dockerfile
+FROM debian:bookworm-slim
+
+RUN apt-get update && \
+    apt-get install -y wget nano && \
+    dpkg --add-architecture i386 && \
+    apt-get update && \
+    apt-get install -y wine32 && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN wget https://github.com/ParrotSec/shellter/blob/master/shellter.exe -O /usr/bin/shellter && \
+    chmod 775 /usr/bin/shellter && \
+    cp /usr/bin/shellter /usr/share/shellter.exe
+
+ENTRYPOINT ["bash"]
+```
+
+```bash
+sudo docker build --network host --platform linux/amd64 -t shellter:7.2 .
+docker run -it --rm shellter:7.2
+```
+
+## Install Veil Framework x86 only
+
+* **Limitation**: Require x86 
+* Install Veil for AV Evasion `https://github.com/Veil-Framework/Veil`
+
+
+```bash
+sudo apt -y install veil
+/usr/share/veil/config/setup.sh --force --silent
+```
+
 ## Install .NET 8
 
 Install script `https://learn.microsoft.com/en-us/dotnet/core/install/linux-scripted-manual`
