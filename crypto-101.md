@@ -82,9 +82,10 @@ scp -i /home/kali/.ssh/id_rsa path-to-file user@remote:/tmp/
 ```
 
 # OpenSSL Key Generation
+
 * -newkey Generate new key instead algorithm
 * -x509 Output an X.509 certificate structure instead of a cert request
-* -nodes Deprecated to no encrypt private key 
+* -nodes Deprecated to no encrypt private key
 * -noenc No encrypt private key
 
 ```bash
@@ -92,6 +93,7 @@ openssl req -newkey rsa:2048 -noenc -keyout bind_shell.key -x509 -days 45 -out b
 ```
 
 # SOCAT OpenSSL encrypted Bind-Shell
+
 * use x509 cert to encrypt connection to bindshell listener
 * verify=0 tells socat to not to check the client's certificate.
 * fork spawn a child process

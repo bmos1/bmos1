@@ -181,9 +181,9 @@ Get-Content .\hostnames.txt | ForEach-Object { nslookup "$_.heise.de" 2> $null |
 85..100 | ForEach-Object -Parallel { nslookup "193.99.144.$_" } -ThrottleLimit 4
 ```
 
-### TCP / UDP
+### NC Port Sweeping TCP / UDP
 
-* use netcat a basic scanner
+* use netcat as basic scanner
 * -z zero I/O mode (scanning)
 * -w timeout in 1 second(s)
 * -v verbose level 2
@@ -192,11 +192,17 @@ Get-Content .\hostnames.txt | ForEach-Object { nslookup "$_.heise.de" 2> $null |
 
 ```bash
 # TCP
-nc -nv -z -w 1 192.168.1.2 7-80
+nc -nvv -z -w 1 192.168.1.2 7-80
 (UNKNOWN) [192.168.1.2] 53 (domain) open
 # UDP
-nc -nv -u -z -w 1 192.168.1.3 120-123
+nc -nvv -u -z -w 1 192.168.1.3 120-123
 (UNKNOWN) [192.168.1.3] 123 (ntp) open
+
+# Automate Port Sweeping
+for i in $(seq 1 254); do nc -zv -w 1 172.16.187.$i 445; done
+
+nc: connect to 172.16.187.216 port 445 (tcp) timed out: Operation now in progress
+Connection to 172.16.187.217 445 port [tcp/microsoft-ds] succeeded!
 ```
 
 Remember: UDP scans are usefull, but sometimes unreliable. The reason is that Firewall or Router often suppress/drop `ICMP port unreachable` packet. This may result in open port report, when they are filtered.
@@ -295,6 +301,7 @@ foreach($port in 1..2024) { If (($a=Test-NetConnection 192.168.1.2 -Port $port -
 ```bash
 #NBT SMB enumeration using UDP 137
 sudo nbtscan -r 192.168.50.0/24
+
 #NMAP SMB enumeration
 nmap -v -p 139,445 -oG smb.txt 192.168.1.2-254
 grep "open" smb.txt | cut -d" " -f2 > hosts.txt
@@ -305,6 +312,7 @@ Enum 4 Linux
 ```bash
 #ENUM SMB local users
 for ip in $(cat hosts.txt); do enum4linux -r $ip; done
+
 #ENUM SMV all
 enum4linux -a 192.168.1.2
 ```

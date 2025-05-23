@@ -22,10 +22,18 @@ sudo cp /usr/share/windows-binaries/nc.exe /var/www/html/
 ## FreeRSD - A Free Remote Desktop Protocol
 
 * +clipboard
+* +auto-reconnect
+* /dynamic-resolution
 * /v: server
+* /pth: NTLM hash
+* /kbd-list
 
 ```bash
-xfreerdp +clipboard /u:user /p:password /v:remote-ip
+xfreerdf /kdb-list
+xfreerdp +clipboard +auto-reconnect /u:user /p:password /v:remote-ip
+xfreerdp /u:user /v:ip /p:password /kbd:0x00010407 /dynamic-resolution +auto-reconnect +clipboard
+xfreerdp /u:user /v:ip /pth:hidden /kbd:0x00010407 /dynamic-resolution +auto-reconnect +clipboard
+ 
 ```
 
 ## Download a file using certutil
@@ -33,7 +41,7 @@ xfreerdp +clipboard /u:user /p:password /v:remote-ip
 * We can also use this to download remote files.
 * But: Certutil is blocked by Windows Security Antivirus rules.
 * -urlcache
-* -f file url 
+* -f file url
 
 ```powershell
 C:\Users\user> cd Downloads

