@@ -1,5 +1,6 @@
 # Windows Data Exfiltration
 
+* Use Remote Desktop Session using xfreerdp3 with +clipboard
 * Use kali linux NC windows binary
 * Locate file transfer utilities on Windows systems
 * File copy to/from anonymous samba share with copy
