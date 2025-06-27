@@ -130,7 +130,7 @@ Use Browser-in-the-Middle (BitM) advanced attacks like the specialized server [c
 firefox https://github.com/fkasler/cuddlephish?tab=readme-ov-file#under-the-hood
 ```
 
-## Hands-on-Credential Phishing
+## Hands-on Credential Phishing
 
 Scenario
 

