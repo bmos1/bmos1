@@ -144,8 +144,10 @@ Benefits of group Managed Service Account (gMSA):
 * password must be changed every 30 days
 
 ## AD Groups
+
+* Limitation: Require DNS server
 * Tools -> AD User and Computers
-* Domain Admins are domain administrators, which means they **have unrestricted access** to the entire domain. 
+* Domain Admins are domain administrators, which means they **have unrestricted access** to the entire domain.
 * Enterprise Admins group is also a **domain administrator of any other domain** in the Forest.
 
 ```powershell

