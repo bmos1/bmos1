@@ -2,7 +2,7 @@
 * 'Forest root' is the first domain and can NOT be changed for the life time of the AD
 * 'Forest root' domain contains service Admins groups for Enterprise and Schema Admins
 * Domain Controller (DC) store all key authentication and authorization services
-* Domain Controller (DC) replicate AD services between others 
+* Domain Controller (DC) replicate AD services between others
 * Domain Controller (DC) implement the role of DNS server for the entire Forest
 * Kerberos is the main network protocol, v5 used sind Windows Server 2003
 * Kerberos parties involved in authentication are called *principals*
@@ -31,6 +31,7 @@
   * https://learn.microsoft.com/en-us/windows-server/identity/ad-fs/ad-fs-overview
 
 ## Remote Desktop
+
 ```bash
 rdesktop -u [user] -p [password] -d [domainName] [ip:port]
 ```
@@ -49,7 +50,7 @@ sekurlsa::ekeys
   
 ## Kerberos 101
 
-```
+```plain
 # Timestamp to avoid replay attacks
 # Session Key can decrypted by the client
 # TGT is encrypted by KDC and can NOT be decrypted by the client, default: 10h!
@@ -119,7 +120,6 @@ Search and filter for Users
 * -LDAPFilter specifies an LDAP query string that is used to filter Active Directory objects
 * -SearchBase specifies an Active Directory path to search under.
 
-
 ```powershell
 Get-ADUser -Filter * -SearchBase "OU=Finance,OU=UserAccounts,DC=FABRIKAM,DC=COM"
 Get-ADUser -Filter 'Name -like "*SvcAccount"' | Format-Table Name, SamAccountName -A
@@ -140,6 +140,7 @@ The Microsoft Key Distribution Service (kdssvc.dll) lets you securely obtain the
 For a gMSA, the domain controller computes the password on the key that the Key Distribution Services provides, along with other attributes of the gMSA. Member hosts can obtain the current and preceding password values by contacting a domain controller.
 
 Benefits of group Managed Service Account (gMSA):
+
 * password must be 120 characters
 * password must be changed every 30 days
 
@@ -181,4 +182,106 @@ GPOs have built-in Conflict Management, the last will be the effective one.
 
 AD-related  MMC will allow you to browse the AD for the correct Active Directory container and define Group Policy based on the selected scope of management (SOM). Examples of Active Directory-related snap-ins include the *Active Directory Users and Computers snap-in* and the *Active Directory Sites and Services snap-in*.
 
+## AD Enumeration
 
+Active Directory (AD), is a service that acts as management layer and allows system administrators to update and manage operating systems, applications, users, and data access on a large scale.
+
+An AD environment has a critical dependency on the Domain Name System (DNS) service. A typical domain controller will host a DNS server that is authoritative for the given domain. Since the Domain  Controller (DC) is such a central domain component, we'll also pay  attention to DC as we enumerate AD.
+
+### AD Enum Automation Tools
+
+### AD Enum Manual
+
+Goals
+
+* Compromise members of **Domain Admins** to gain control over **Domain Tree**.s
+* Compsromise members of **Enterprise Admins** to gain full access over all DCs in the **Domain Forest**.
+
+Scenario
+
+* Domain User credentials are known to us
+* Domain User has Remote Desktop permissions on machine wihtin the domain
+* Limitation: User is NOT a local admin
+* Asumptions: Start enum  with lower privileged user and repeat enum with each compromised user (pivot)
+
+Attacker
+
+```bash
+xfreerdp3 +clipboard /cert:ignore /d:corp.com /u:user /v:IP /p:'Passw@rd!!'
+```
+
+Victim
+
+```shell
+# List domain users and groups to enum Domain Admins or Enterprise Admins
+# Limitations: lists no nested groups, no specific attributes 
+net user /domain
+net user "someuser" /domain
+net group /domain
+net group "somegroup" /domains
+```
+
+```powershell
+# LDAP enumeration using Active Directory Service Interfaces (ADSI) 
+# LDAP://HostName[:PortNumber][/DistinguishedName]
+# e.g. CN=Jeff,DC=corp,DC=com
+notepad ad-enum-manually.ps1
+
+# LDAP search with ldap query
+function LDAPSearch {
+    param (
+        [string]$LDAPQuery
+    )
+
+    # Get the Primary DC (PDC) with PdcRoleOwer = ...
+    $pdc = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().PdcRoleOwner.Name
+    # Get LDAP destinguied name
+    $dn = ([adsi]'').distinguishedName
+    # Build LDAP path
+    $ldap = "LDAP://$pdc/$dn"
+    $ldap
+
+    # Search from LDAP domain root directory endpoint
+    # Filter for user objects only 0x30000000 (805306368)
+    # Filter for a specific member e.g. jeff
+    # $dirsearcher.filter = "samAccountType=805306368"
+    # $dirsearcher.filter = "name=jeff"
+    # New-Object System.DirectoryServices.DirectoryEntry($ldap)  
+    $direntry = New-Object System.DirectoryServices.DirectoryEntry($ldap)
+    ($direntry)
+    $dirsearcher = New-Object System.DirectoryServices.DirectorySearcher($direntry, $LDAPQuery)
+    return $dirsearcher.FindAll() 
+}
+
+# Foreach($obj in $result)
+# {
+#     Foreach($prop in $obj.Properties)
+#     {
+#         $prop
+#     }
+# }
+```
+
+```powershell
+powershell -ep bypass
+Import-Module -Force .\ad-enum-manally.ps1
+
+# AD User search
+LDAPSearch -LDAPQuery "(name=jeff)"
+LDAPSearch -LDAPQuery "(name=jeff)" | % { $_.properties | Format-List }
+LDAPSearch -LDAPQuery "(name=jeff)" | % { $_.properties.PropertyNames }
+
+# AD User enumeration
+LDAPSearch -LDAPQuery "(objectcategory=user)" | % { $_.properties.cn}
+LDAPSearch -LDAPQuery "(samAccountType=805306368)" | % {$_.properties.cn}
+
+# Enumerate groups and members 
+LDAPSearch -LDAPQuery "(objectcategory=group)" | % { "-> Group",$_.properties.cn,"-> Members",$_.properties.member }
+Foreach ($group in $(LDAPSearch -LDAPQuery "(objectCategory=group)")) { $group.properties | select {$_.cn}, {$_.member} }
+
+# AD Group enumeration
+LDAPSearch -LDAPQuery "(objectclass=group)" | % { $_.Properties.cn}
+
+# AD Group nested member enumeration
+LDAPSearch -LDAPQuery "(&(objectCategory=group)(cn=Sales Department))" | % { $_.Properties.member }
+```
