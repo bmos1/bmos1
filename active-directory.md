@@ -190,6 +190,44 @@ An AD environment has a critical dependency on the Domain Name System (DNS) serv
 
 ### AD Enum Automation Tools
 
+Goals
+
+* Get network situational awareness of Windows AD domains
+* Use [PowerView.ps1](https://powersploit.readthedocs.io/en/latest/Recon/#powerview) to do more than user and group member enumeration
+
+Scenario
+
+* Domain User credentials are known to us
+* Domain User has Remote Desktop permissions on machine wihtin the domain
+* Limitation: User is NOT a local admin
+* Asumptions: Start enum  with lower privileged user and repeat enum with each compromised user (pivot)
+
+Attacker
+
+```bash
+xfreerdp3 +clipboard /cert:ignore /d:corp.com /u:user /v:IP /p:'Passw@rd!!'
+```
+
+Victim
+
+```powershell
+powershell -ep bypass
+Import-Module -Force PowerView.ps1
+
+Get-NetDomain
+
+Get-NetUser | select cn
+Get-NetUser | select cn,pwdlastset,lastlogon
+Get-NetUser | select cn, memberof
+Get-NetGroup | select cn
+Get-NetGroup "Some Group" | select member
+
+# Search for AD user details
+Get-NetUser > users.txt
+gc users.txt | select-string "username" -Context 3
+
+```
+
 ### AD Enum Manual
 
 Goals
@@ -239,36 +277,58 @@ function LDAPSearch {
     $dn = ([adsi]'').distinguishedName
     # Build LDAP path
     $ldap = "LDAP://$pdc/$dn"
-    $ldap
-
     # Search from LDAP domain root directory endpoint
-    # Filter for user objects only 0x30000000 (805306368)
-    # Filter for a specific member e.g. jeff
-    # $dirsearcher.filter = "samAccountType=805306368"
-    # $dirsearcher.filter = "name=jeff"
-    # New-Object System.DirectoryServices.DirectoryEntry($ldap)  
     $direntry = New-Object System.DirectoryServices.DirectoryEntry($ldap)
-    ($direntry)
     $dirsearcher = New-Object System.DirectoryServices.DirectorySearcher($direntry, $LDAPQuery)
     return $dirsearcher.FindAll() 
 }
 
-# Foreach($obj in $result)
-# {
-#     Foreach($prop in $obj.Properties)
-#     {
-#         $prop
-#     }
-# }
+function LDAPEnumUsers {
+  return LDAPSearch("(objectcategory=user)") | % { $_.properties.cn};
+}
+
+function LDAPEnumGroups {
+  return LDAPSearch("(objectcategory=group)") | % { $_.properties.cn};
+}
+
+function LDAPEnumGroupMembers {
+  return LDAPSearch("(objectcategory=group)") | % { "[*] Group",$_.properties.cn,"[+] Members",$_.properties.member }
+}
+
+function LDAPSearchGroupMembers {
+   param (
+        [string]$LDAPGroup
+   )
+   
+   return LDAPSearch("(&(objectCategory=group)(cn=$LDAPGroup))") | % { $_.Properties.member }
+}
+
+function LDAPSearchUser {
+   param (
+        [string]$LDAPUser
+   )
+   return LDAPSearch("(name=$LDAPUser)") | % { $_.properties | Format-Table }
+}
 ```
 
 ```powershell
 powershell -ep bypass
 Import-Module -Force .\ad-enum-manally.ps1
 
+LDAPEnumUsers
+LDAPEnumGroups
+LDAPEnumGroupMembers | select-string -Context 3 "Personnel"
+LDAPSearchGroupMembers "Service Personnel"
+LDAPSearchUser "nicole"
+
+```
+
+Advanced Manual LDAP Search
+
+```powershell
 # AD User search
 LDAPSearch -LDAPQuery "(name=jeff)"
-LDAPSearch -LDAPQuery "(name=jeff)" | % { $_.properties | Format-List }
+LDAPSearch -LDAPQuery "(name=jeff)" | % { $_.properties | Format-Table }
 LDAPSearch -LDAPQuery "(name=jeff)" | % { $_.properties.PropertyNames }
 
 # AD User enumeration
@@ -276,7 +336,7 @@ LDAPSearch -LDAPQuery "(objectcategory=user)" | % { $_.properties.cn}
 LDAPSearch -LDAPQuery "(samAccountType=805306368)" | % {$_.properties.cn}
 
 # Enumerate groups and members 
-LDAPSearch -LDAPQuery "(objectcategory=group)" | % { "-> Group",$_.properties.cn,"-> Members",$_.properties.member }
+LDAPSearch -LDAPQuery "(objectcategory=group)" | % { "[*] Group",$_.properties.cn,"[+] Members",$_.properties.member }
 Foreach ($group in $(LDAPSearch -LDAPQuery "(objectCategory=group)")) { $group.properties | select {$_.cn}, {$_.member} }
 
 # AD Group enumeration
@@ -284,4 +344,113 @@ LDAPSearch -LDAPQuery "(objectclass=group)" | % { $_.Properties.cn}
 
 # AD Group nested member enumeration
 LDAPSearch -LDAPQuery "(&(objectCategory=group)(cn=Sales Department))" | % { $_.Properties.member }
+```
+
+## Automatic Active Directory Enumeration
+
+## Manual Active Directory Enumeration
+
+Goal
+
+* Create a Domain Map by ...
+* Enumerate Operating Systems
+* Enumerate permission and logged on users
+* Enumerate through Service Principal Names (Service Accouts)
+* Enumerate Object Permissions
+* Explore Domain Shares
+
+Scenario
+
+* We have compromised a Domain User account and try to create a domain map
+* Use **PowerView.ps1** from [PowerSploit Tools](https://live.sysinternals.com/)
+* Use **PsLoggedOn** from [SysInternal Tools](https://live.sysinternals.com/)
+* Use ***Default AD Security Group** from [MS Docu](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/understand-security-groups#default-security-groups)
+
+```powershell
+powershell -ep bypass
+Import-Module PowerView.ps1
+
+# Find Domain Computers with local Administator access 
+Find-LocalAdminAccess
+
+# Enum Domain Computers
+Get-NetComputer | select operatingsystem,operatingsystemversion,dnshostname,distinguishedname
+
+# Find Logged-on users on domain computers with Sysinternal tool PsLoggedOn
+# Uses Remote Registry Service
+# Limitation:
+# Disabled by default Windows 8 and later 
+# Enabled by default on Windows Server 2012 R2, 2016 (1607), 2019 (1809), and Server 2022 (21H2)
+.\PSLoggedOn # local machine 
+.\PsLoggedOn \\files01 # remote machine
+
+# Find Logged-on users on domain computers
+# Uses NetWkstaUserEnum and NetSessionEnum
+# Limitation: 
+# Windows 10 Pro 16299 build 1709 or before
+# Windows Server 2019 build 1809 or before
+Get-NetSession # local machine
+Get-NetSession -ComputerName granted # remote machine
+Get-NetSession -Verbose -ComputerName denied # trouble shooting
+
+# Get-NetSession returns invalid output, because the user does NOT have DefaultSecurity the required permissions ReadKey, FullControll
+Get-Acl -Path HKLM:SYSTEM\CurrentControlSet\Services\LanmanServer\DefaultSecurity\ | Format-List
+
+# Enum Service Account (principals)
+# Service accounts are LocalSystem, LocalService, and NetworkService. 
+# Group Managed Service Accounts (gMSA) require Windows Server 2012 or higher
+# Service Principal Name (SPN) associates a service to a specific service account in Active Directory
+Get-NetUser -SPN | select name,serviceprincipalname # all users
+setspn.exe -L iis_service # user
+nslookup.exe web04.corp.com
+
+# Enum Object Permissions 
+# GenericAll: Full permissions on object
+# GenericWrite: Edit certain attributes on the object
+# WriteOwner: Change ownership of the object
+# WriteDACL: Edit ACE's applied to object
+# AllExtendedRights: Change password, reset password, etc.
+# ForceChangePassword: Password change for object
+# Self (Self-Membership): Add ourselves to for example a group
+
+# Enum AD User ACL
+$users=Get-ObjectAcl -LDAPFilter "(objectCategory=user)" | select objectDN, ObjectSID | Unique -AsString
+
+# Enum AD Group ACLs
+$groups=Get-ObjectAcl -LDAPFilter "(objectCategory=group)" | select objectDN, ObjectSID | Unique -AsString
+
+# Enum AD Users with object permissions on AD Group by SecurityIdentifier
+$objects = ($users | % { $u = $_; $groups | % { $g = $_; Get-ObjectAcl -DistinguishedName $g.ObjectDN | ? { $_.SecurityIdentifier -eq $u.ObjectSID } } } )
+
+# Focus on GenericAll Permission 
+# Focus on ObjectDN, ActiveDirectoryRights, SecurityIdentifier
+$objects | ? ActiveDirectoryRights -eq "GenericAll" | 
+$objects | % { $_; $si=$_.SecurityIdentifier; $name=$(Convert-SidToName $_.SecurityIdentifier); "[*] $si -> $name" }
+
+ObjectDN              : CN=Management Department,DC=corp,DC=com
+ActiveDirectoryRights : GenericAll
+SecurityIdentifier    : S-1-5-21-1987370270-658905905-1781884369-1104
+S-1-5-21-1987370270-658905905-1781884369-1104 -> CORP\stephanie
+
+# Convert SID to AD Username
+Convert-SidToName S-1-5-21-1987370270-658905905-1781884369-1104
+CORP\stephanie
+
+# List Ad User ACLs
+Get-ObjectAcl -Identity stephanie ## user
+ObjectDN               : CN=stephanie,CN=Users,DC=corp,DC=com
+ObjectSID              : S-1-5-21-1987370270-658905905-1781884369-1104
+ActiveDirectoryRights  : ReadProperty
+SecurityIdentifier     : S-1-5-21-1987370270-658905905-1781884369-553
+...
+
+# Focus on GenericAll Permission on AD Users
+Get-ObjectAcl -Identity "stephanie" | where activedirectoryrights -eq "genericall" | select securityidentifier,activedirectoryrights | fl
+
+# Focus on GenericAll Permisison on AD groups
+Get-ObjectAcl -Identity "Management Department" | ? {$_.ActiveDirectoryRights -eq "GenericAll"} | select SecurityIdentifier,ActiveDirectoryRights | fl
+
+Convert-SidToName S-1-5-21-1987370270-658905905-1781884369-553
+CORP\RAS and IAS Servers
+
 ```
