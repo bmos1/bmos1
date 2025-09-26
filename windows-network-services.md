@@ -209,6 +209,7 @@ psexec -i \myComputer -u domain\username -p password cmd /c "systeminfo"
 psexec.exe -i \\192.168.54.100 -u administrator -p remoteadmin cmd
 
 psexec.exe -i \\IP -u user -p password cmd /c "type c:\Users\user\Desktop\file.txt"
+# -s Runas System\NT Authority
 psexec.exe -i -s \\IP -u admin -p password cmd /c "type c:\Users\admin\Desktop\file.txt"
 ```
 

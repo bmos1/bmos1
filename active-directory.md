@@ -36,11 +36,12 @@
 rdesktop -u [user] -p [password] -d [domainName] [ip:port]
 ```
 
-## Use NTLM pass-the-hash to create Kerberos TGTs 
-* insert stolen NTLM hash into memory
-* wipeout other NTLM hashes
-* create a new TGT using HT hash only
-* https://www.blackhat.com/docs/us-14/materials/us-14-Duckwall-Abusing-Microsoft-Kerberos-Sorry-You-Guys-Don't-Get-It-wp.pdf
+## Use NTLM pass-the-hash to create Kerberos TGTs
+
+* **insert stolen NTLM hash into memory** with sekurlsa::pth
+* wipeout other NTLM hashes with sekurlsa::ekeys (eliminate keys)
+* create a new TGT using NT hash only
+* From [Duckwall-Abusing-Microsoft-Kerberos](https://www.blackhat.com/docs/us-14/materials/us-14-Duckwall-Abusing-Microsoft-Kerberos-Sorry-You-Guys-Don't-Get-It-wp.pdf)
 
 ```powershell
 mimekatz 

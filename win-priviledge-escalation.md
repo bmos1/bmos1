@@ -7,8 +7,10 @@ Limitation: Requires GUI access
 ```powershell
 # Run as local administrator without password
 powershell Start-Process -Verb Runas powershell
+
 # Runas different user
 runas /user:offsec cmd
+.\PsExec.exe -u "domain.com\user" -p "SomeSecret" powershell
 ```
 
 ## Concepts
@@ -200,6 +202,33 @@ More Tools
 * WinPEAS `https://github.com/carlospolop/PEASS-ng/tree/master/winPEAS`
 * JAWS `https://github.com/411Hall/JAWS`
 * PEASS-NG `https://www.kali.org/tools/peass-ng/` ↩︎
+
+## Modify (AD) User accoutns
+
+* Use `net user` to change (AD) user passwords
+* Use `PowerView.ps1` to change user passowrds
+
+```powershell
+# Change user password
+net user username userpass 
+
+# Add and delete users
+net user /add username userpass
+net user /del username
+
+# Add and delete local Administrator group
+net localgroup /add Administrator username
+net localgroup /del Administrator username
+
+# Change AD user password
+$userpass=ConvertTo-SecureString 'password' -AsPlainText -Force
+Set-DomainUserPassword -Identity andy -AccountPassword $userpass
+```
+
+## Modify AD Groups
+
+* Use `net groups` to add and delete users from Add group
+
 
 ## Hijacking Service Binaries
 

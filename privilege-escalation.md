@@ -19,7 +19,7 @@
 * view hostname `hostname`
 * list user context information `id`
 * list users `/etc/passwd`
-* list groups `etc/groups`
+* list groups `/etc/groups`
 * list release `cat /etc/*-release`
 * list kernel version and architecture `uname -a`
 * list processes `ps aux`
@@ -41,6 +41,11 @@
 id
 cat /etc/passwd
 cat /etc/groups
+# list sudo users
+getent group sudo
+grep '^sudo:' /etc/group 
+
+# hostname, environment
 hostname
 (env || set) 2>/dev/null
 
