@@ -346,6 +346,8 @@ $objects = ($users | % { $u = $_; $groups | % { $g = $_; Get-ObjectAcl -Distingu
 # Focus on "GenericAll" permission
 # Focus on ObjectDN, ActiveDirectoryRights, SecurityIdentifier
 $objects | ? ActiveDirectoryRights -eq "GenericAll"
+$objects | ? ActiveDirectoryRights -eq "GenericWrite"
+$objects | ? ActiveDirectoryRights -eq "AllExtendedRights"
 $objects | % { $_; $si=$_.SecurityIdentifier; $name=$(Convert-SidToName $_.SecurityIdentifier); "[*] $si -> $name" }
 
 ObjectDN              : CN=Management Department,DC=corp,DC=com
@@ -371,9 +373,13 @@ SecurityIdentifier     : S-1-5-21-1987370270-658905905-1781884369-553
 
 # Focus on GenericAll Permission on AD Users
 Get-ObjectAcl -Identity "stephanie" | where activedirectoryrights -eq "genericall" | select securityidentifier,activedirectoryrights | fl
+Get-ObjectAcl -Identity "stephanie" | where activedirectoryrights -eq "genericwrite" | select securityidentifier,activedirectoryrights | fl
+Get-ObjectAcl -Identity "stephanie" | where activedirectoryrights -eq "allextendedrights" | select securityidentifier,activedirectoryrights | fl 
 
 # Focus on GenericAll Permisison on AD groups
 Get-ObjectAcl -Identity "Management Department" | ? {$_.ActiveDirectoryRights -eq "GenericAll"} | select SecurityIdentifier,ActiveDirectoryRights | fl
+Get-ObjectAcl -Identity "Management Department" | ? {$_.ActiveDirectoryRights -eq "GenericWrite"} | select SecurityIdentifier,ActiveDirectoryRights | fl
+Get-ObjectAcl -Identity "Management Department" | ? {$_.ActiveDirectoryRights -eq "AllExtendedRights"} | select SecurityIdentifier,ActiveDirectoryRights | fl
 
 ```
 
@@ -381,7 +387,7 @@ Manual Active Directory Share Enumeration
 
 * Focus on `SYSVOL` may reveal files and directories on the DC
 * Default directory on DC `%SystemRoot%\SYSVOL\Sysvol\domain-name`
-* List and Review Policy and Scrips
+* List and Review Policy and Scripts
 * [Decrypt](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-gppref/2c15cbf0-f086-4c74-8b70-1f2fa45dd4be?redirectedfrom=MSDN#endNote2) GPP configured Local Administrator Passwords
 * Windows default shares are e.g. IPC$, ADMIN$$, C$
 * Focus on NON-default shares
@@ -420,4 +426,3 @@ d-----          9/2/2022   4:08 PM                scripts
 gpp-decrypt "+bsY0V3d4/KgX3VJdO/vyepPfAN1zMFTiQDApgR92JE"
 P@$$w0rd
 ```
-

