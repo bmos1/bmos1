@@ -82,6 +82,7 @@ def main():
                 sys.exit(1)
             else:
                 ps_script = open(script_file, 'r').read()
+                print("powershell -nop -w hidden -e ")
                 print(powershell_encode(ps_script))
 
 

