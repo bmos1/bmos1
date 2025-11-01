@@ -36,7 +36,7 @@
 rdesktop -u [user] -p [password] -d [domainName] [ip:port]
 ```
 
-## Use NTLM pass-the-hash to create Kerberos TGTs
+## Use NTLM over pass-the-hash (oPtH) to create Kerberos TGTs
 
 * **insert stolen NTLM hash into memory** with sekurlsa::pth
 * wipeout other NTLM hashes with sekurlsa::ekeys (eliminate keys)

