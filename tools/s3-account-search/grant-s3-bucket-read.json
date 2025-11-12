@@ -1,0 +1,15 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowUserToListBucket",
+            "Effect": "Allow",
+            "Resource": "arn:aws:s3:::offseclab-dummy-bucket-13460-6400-24670",
+            "Principal": {
+                "AWS": ["arn:aws:iam::024850851545:user/cloudadmin"]
+            },
+            "Action": "s3:ListBucket"
+
+        }
+    ]
+}

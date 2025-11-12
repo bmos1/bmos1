@@ -90,9 +90,9 @@ Get-LocalGroup
 
 # Important built-in groups
 Get-LocalGroupMember "Administrators"
-Get-LocalGroupMember "Backup Operators"
-Get-LocalGroupMember "Remote Desktop Users"
-Get-LocalGroupMember "Remote Management Users"
+Get-LocalGroupMember "Backup Operators"        
+Get-LocalGroupMember "Remote Desktop Users"    <- RDP
+Get-LocalGroupMember "Remote Management Users" <- WinRM, Powershell Remoting
 
 # Operating system, version and architecture
 # Details can be found https://en.wikipedia.org/wiki/List_of_Microsoft_Windows_versions
@@ -404,6 +404,8 @@ Get-Process filezilla -Module | Group -Property FileName | Select Name
 ```
 
 ## Exploit Scheduled Tasks
+
+Requires: Target user has the **Log on as a batch job access** right, we can **schedule a task to execute a program** of our choice as this user.
 
 Privilege Escalation Vectors
 
