@@ -57,7 +57,7 @@ sudo nmcli connection modify "Wired connection 1" ipv4.dns "8.8.8.8"
 sudo systemctl restart NetworkManager
 ```
 
-## From Leaked Secrets lead to Jenkins Pipeline Poisoning
+## From Leaked Secrets to Jenkins Pipeline Poisoning
 
 Scenario
 
@@ -390,3 +390,102 @@ AWS Secret Access Key []: Oabcd...
 # stealth verifications of backdoor acount
 aws --profile attacker sts get-access-key-info --access-key-id  AKIA7890...
 ```
+
+## Dependency Chain Abuse
+
+Trick a build system to download and run a harmful hijacked dependency to compromise the CI/CD pipeline.
+
+Scenario
+
+* Enum available Services App, Jenkins buildserver, GIT
+* Find missing dependency statement in the logs
+* Code and publish such malicious dependency package
+* Scan internal network and create a tunnel into automation server
+* Exploit a vulnerability in a plugin to steal a AWS credentials
+* Find S3 the contains the AWS keys in Terraform state file using the stolen AWS credentials
+* Login and create backdoor account
+
+### Prepare PIP on kali to publish packages
+
+* create pip configuration on kali
+* configure a local pypi instance for lab
+
+```shell
+kali@kali:~$ mkdir -p ~/.config/pip/      
+kali@kali:~$ nano ~/.config/pip/pip.conf
+kali@kali:~$ cat ~/.config/pip/pip.conf
+[global]
+index-url = http://pypi.offseclab.io
+trusted-host = pypi.offseclab.io 
+# defining extra repo sources for pip includes public ones!!! 
+# packages with highest versions are prioritized
+extra-index-url = ... 
+```
+
+### Enum available Services App, Jenkins buildserver, GIT
+
+```shell
+# Open App and inject network traffic
+# Find Server info to get fino about reverse proxy and servers
+firefox http://app.offseclab.io
+
+# Find API and generate an initial access token
+firefox app.offseclab.io/get_token
+
+# Find common folders on the web app
+dirb http://app.offseclab.io /usr/share/wordlists/dirb/common.txt
+
+# Use curl to download source code of single page
+# Use wget to download offline version (full mirror -m)
+mkdir offseclab && cd offseclab
+curl -s app.offseclab.io
+wget -m -E -k -K -p -e robots=on -H -Dapp.offseclab.io -nd "http://app.offseclab.io"
+
+
+# Open Source intelligence
+# searching for the target's name on websites like Stack Overflow, Reddit, and other forums
+firefox http://forum.offseclab.io/
+
+requirements.txt
+  Flask~=2.2.3
+  flask_httpauth~=4.7.0
+  flask_mail~=0.9.1
+  flask_restful~=0.3.9
+  flask_sqlalchemy~=3.0.3
+  python-dotenv~=1.0.0
+  requests~=2.25.1
+  SQLAlchemy~=2.0.7
+  hackshort-util~=1.1.0
+```
+
+
+
+### Dependency Chain Attack
+
+The dependency chain attack trick a user or build system to download a malicious dependency from a valid or malicious package repository.
+
+* dependency hijacking (contribute malicious code)
+* dependency substitution (typesqatting, misspelling)
+* dependency confusions (packages with the same name and newer version)
+
+PIP Versioning
+
+* ==: exact version required
+* <=: less than or equal
+* >=: greater than or equal
+* ~=: **patches are compatible**, but not major or minor updates
+
+Observations
+
+* We can conclude that **hackshort_util is from the hackshort-util** package.
+* We'll also make note that the utils submodule is imported from the package.
+
+```shell
+pip download hackshort-util
+
+ERROR: No matching distribution found for hackshort-util
+
+
+```
+
+
