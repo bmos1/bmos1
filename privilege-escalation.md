@@ -6,7 +6,6 @@
 * Abusing System Linux components
 * Mitre Att&ck Techniques `https://attack.mitre.org/tactics/TA0004/`
 
-
 ## Linux Permisisons
 
 * -rws  = suid, guid bit runs with the permission of the file owner
@@ -40,7 +39,8 @@
 # user, groups
 id
 cat /etc/passwd
-cat /etc/groups
+cat /etc/group
+
 # list sudo users
 getent group sudo
 grep '^sudo:' /etc/group 

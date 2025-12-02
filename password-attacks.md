@@ -159,7 +159,7 @@ Scenario
 * Use \l to list all databases
 * Use \c database to Connect to database
 * Get Attlasian credentials from cwd_user
-* Use hydra to crack the PKCS5S2 hash
+* Use hashcat to crack the PKCS5S2 hash
 
 Victim
 

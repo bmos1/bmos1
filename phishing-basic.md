@@ -142,6 +142,7 @@ Scenario
 Clone a letitimate Website
 
 * Use `wget` to download an offline version
+* Option -m mirror (recursive + timestamping)
 * Option -E change the file extension
 * Option -k convert links to local file paths
 * Option -K save original file with **.orig** extension
@@ -151,11 +152,12 @@ Clone a letitimate Website
 * Option -D to limit the domains
 * Option -nd save all files in a flat without subdirectories
 
+
 ```bash
 # Clone ZoomSignin website
 mkdir -p ~/ZoomSignin
 cd ~/ZoomSignin
-wget -E -k -K -p -e robots=off -H -Dzoom.us -nd "https://zoom.us/signin#/login"
+wget -m -E -k -K -p -e robots=off -H -Dzoom.us -nd "https://zoom.us/signin#/login"
 ls -la
 ```
 
