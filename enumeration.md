@@ -279,6 +279,9 @@ nmap --script http-title 192.168.1.2
 # Probe HTTP headers
 nmap --script http-headers 192.168.1.2
 nmap --script-help http-headers
+# Probe TFTP files blindly
+nmap --script /usr/share/nmap/scripts/tftp-enum.nse \
+--version-all -sU -p 69 192.168.215.222
 ```
 
 ### PS Port-Scan (Windows)

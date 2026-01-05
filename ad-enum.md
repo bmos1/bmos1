@@ -22,6 +22,7 @@ Attacker
 
 ```bash
 xfreerdp3 +clipboard /cert:ignore /d:corp.com /u:user /v:IP /p:'Passw@rd!!'
+
 ```
 
 Victim
@@ -62,6 +63,7 @@ Attacker
 
 ```bash
 xfreerdp3 +clipboard /cert:ignore /d:corp.com /u:user /v:IP /p:'Passw@rd!!'
+xfreerdp3 +clipboard /cert:ignore /u:"DOMAIN\\User" /v:IP /pth:hidden-hash
 ```
 
 Victim
@@ -79,7 +81,7 @@ net group "somegroup" /domains
 # LDAP enumeration using Active Directory Service Interfaces (ADSI) 
 # LDAP://HostName[:PortNumber][/DistinguishedName]
 # e.g. CN=Jeff,DC=corp,DC=com
-notepad ad-enum-manually.ps1
+notepad LDAPEnum.ps1
 
 # LDAP search with ldap query
 function LDAPSearch {
@@ -129,7 +131,7 @@ function LDAPSearchUser {
 
 ```powershell
 powershell -ep bypass
-Import-Module -Force .\ad-enum-manally.ps1
+Import-Module -Force .\LDAPEnum.ps1
 
 LDAPEnumUsers
 LDAPEnumGroups

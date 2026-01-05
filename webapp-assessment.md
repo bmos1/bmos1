@@ -21,6 +21,30 @@ sudo nmap -p80 --script=http-enum <targets>
 * https://www.wappalyzer.com/
 * a free sign up is required
 
+## Discover web directories and files with Dirsearch
+
+* -u url:port
+* -w wordlist
+* -f -e pdf,php,aspx,jsp,html,js search for file extensions
+* -r recursive
+* --force-recursive brute-force for every found path
+* --auth-type=TYPE basic, digest, bearer, ntlm
+* --auth=CREDENTIAL user:password or bearer token
+* --proxy=PROXY localhost:8080, socks5://localhost:8088
+* --format=FORMAT Available: simple, plain, json, xml, md, csv, html
+
+```shell
+dirsearch -u http://192.168.215.225:8090/ -w /usr/share/wordlists/dirb/common.txt -r -f -e pdf,php,aspx,jsp,html,js 
+
+# use with http proxy
+proxychains -q -f /etc/proxychains-http.conf \
+dirsearch -u http://172.16.215.32:80/ -w /usr/share/wordlists/dirb/common.txt -r -f -e pdf,php,aspx,jsp,html,js
+
+# use with socks5 proxy
+proxychains -q \
+dirsearch -u http://172.16.215.32:80/ -w /usr/share/wordlists/dirb/common.txt -r -f -e pdf,php,aspx,jsp,html,js
+```
+
 ## Discover web directories and files with GoBuster
 
 Gobuster is a tool used to brute-force: URIs (directories and files) in web sites, DNS subdomains (with wildcard support), Virtual Host names on target web servers, Open Amazon S3 buckets, Open Google Cloud buckets and TFTP servers.
@@ -47,9 +71,10 @@ gobuster dir -v -b 301 -u <target> -w /usr/share/wordlists/dirb/common.txt -t 4
 /uploads              (Status: 301) [Size: 316] [--> http://192.168.50.20/uploads/
 ```
 
-## Dirb
+## Dirb (deprecated)
 
 * works recursively by default
+* very slow!
 
 ```bash
 dirb http://target.com:80 /usr/share/wordlists/dirb/common.txt

