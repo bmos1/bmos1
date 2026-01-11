@@ -21,7 +21,7 @@ lient-side attacks often must deliver payload to a target on a non-routable inte
 # Find, Downlaod and read Metadata
 gobuster dir -u http://target.com/ -x pdf -w /usr/share/wordlists/dirb/common.txt
 curl -O http://target.com/some.pdf
-exexiftool -a -u some.pdf
+exiftool -a -u some.pdf
 ```
 
 ## Fingerprint Offline Machines

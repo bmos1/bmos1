@@ -108,7 +108,7 @@ lsmod
 /sbin/modinfo modulename
 
 # list programs for file upload
-find / -name wget
+find / -name wget 
 find / -name nc*
 find / -name netcat*
 find / -name tftp*

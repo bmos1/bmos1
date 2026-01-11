@@ -180,7 +180,7 @@ Get-Help Invoke-BloodHound
 # -EncryptZip
 
 # Run snapshot of all with BloodHound 
-Invoke-BloodHound -CollectionMethods All -OutputDirectory "$env:USERPROFILE\Desktop" -OutputPrefix "corp_audit" # user desktop
+Invoke-BloodHound -CollectionMethods All -OutputDirectory "C:\Users\Public" -OutputPrefix "corp_audit" # user desktop
 
 # Specify a loop duration to for sessions, default is 2 hour (here 10min)
 SharpHound.exe --CollectionMethods Session --Loop --Loopduration 00:10:00

