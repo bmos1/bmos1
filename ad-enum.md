@@ -22,7 +22,6 @@ Attacker
 
 ```bash
 xfreerdp3 +clipboard /cert:ignore /d:corp.com /u:user /v:IP /p:'Passw@rd!!'
-
 ```
 
 Victim
@@ -60,6 +59,10 @@ Scenario
 * Asumptions: Start enum  with lower privileged user and repeat enum with each compromised user (pivot)
 
 Attacker
+
+```bash
+ldapsearch -H ldap://IP -D "user" -W -b "DC=corp,DC=com" "(SamAccountName=user)"
+```
 
 ```bash
 xfreerdp3 +clipboard /cert:ignore /d:corp.com /u:user /v:IP /p:'Passw@rd!!'
